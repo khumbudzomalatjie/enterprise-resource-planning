@@ -211,4 +211,62 @@ export default function Dashboard() {
                   supervisor: 'bg-green-500',
                   cleaner: 'bg-cyan-500',
                   sales_agent: 'bg-pink-500',
-                  customer: 'bg-orange-
+                  customer: 'bg-orange-500'
+                }
+                
+                return (
+                  <div key={role}>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-white text-sm capitalize">
+                        {role.replace(/_/g, ' ')}
+                      </span>
+                      <span className="text-gray-400 text-sm">
+                        {count} ({percentage}%)
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-700 rounded-full h-2.5 overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${percentage}%` }}
+                        transition={{ duration: 1, delay: 0.5 }}
+                        className={`h-full rounded-full ${colors[role] || 'bg-primary'}`}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </motion.div>
+        </div>
+
+        {/* System Status */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="mt-8 bg-[#3a3a3a] rounded-[2em] p-6 shadow-[5px_5px_20px_#2a2a2a,-5px_-5px_20px_#4a4a4a]"
+        >
+          <div className="flex items-center space-x-3 mb-6">
+            <AlertCircle className="w-5 h-5 text-primary" />
+            <h2 className="text-white text-xl font-semibold">System Status</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-center space-x-3">
+              <span className="w-3 h-3 rounded-full bg-green-400"></span>
+              <span className="text-gray-300">Authentication Service: Operational</span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <span className="w-3 h-3 rounded-full bg-green-400"></span>
+              <span className="text-gray-300">Database: Connected</span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <span className="w-3 h-3 rounded-full bg-green-400"></span>
+              <span className="text-gray-300">API: Online</span>
+            </div>
+          </div>
+        </motion.div>
+      </main>
+    </div>
+  )
+}
