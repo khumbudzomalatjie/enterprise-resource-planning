@@ -134,10 +134,14 @@ export default function ForgotPassword() {
             </form>
           ) : (
             <div className="text-center pt-5">
-              <p className="text-gray-400 mb-6">
-                We've sent a password reset link to <strong className="text-primary">{email}</strong>.
-                Please check your inbox and follow the instructions.
-              </p>
+              <div className="mb-6 p-4 bg-green-500/10 rounded-[25px] border border-green-500/20">
+                <p className="text-green-400 text-sm">
+                  We've sent a password reset link to <strong className="text-primary">{email}</strong>
+                </p>
+                <p className="text-gray-400 text-xs mt-2">
+                  Please check your inbox and follow the instructions.
+                </p>
+              </div>
               
               <motion.button
                 type="button"
