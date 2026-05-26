@@ -41,7 +41,7 @@ export default function AppRoutes() {
       {/* Error Routes */}
       <Route path="/unauthorized" element={<Unauthorized />} />
       
-      {/* Default - Redirect to login instead of dashboard */}
+      {/* Default - Redirect to login */}
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
