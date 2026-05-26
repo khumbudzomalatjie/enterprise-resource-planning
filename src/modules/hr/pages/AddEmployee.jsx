@@ -59,11 +59,15 @@ export default function AddEmployee() {
   })
 
   const tabs = [
-    { id: 'general', label: 'General Info' },
-    { id: 'employment', label: 'Employment' },
-    { id: 'emergency', label: 'Emergency' },
-    { id: 'banking', label: 'Banking' },
-    { id: 'documents', label: 'Documents' },
+  { id: 'general', label: 'General Info' },
+  { id: 'employment', label: 'Employment' },
+  { id: 'emergency', label: 'Emergency' },
+  { id: 'banking', label: 'Banking' },
+  { id: 'timeclock', label: 'Time Clock History' },
+  { id: 'payroll', label: 'Payroll History' },
+  { id: 'scheduling', label: 'Scheduling' },
+  { id: 'leave', label: 'Leave' },
+  { id: 'documents', label: 'Documents' },
   ]
 
   const handleChange = (e) => {
