@@ -8,29 +8,36 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: {
-          DEFAULT: '#99b9ff',
-          dark: '#7fa8ff',
+        emerald: {
+          50: '#ecfdf5',
+          100: '#d1fae5',
+          200: '#a7f3d0',
+          300: '#6ee7b7',
+          400: '#34d399',
+          500: '#10b981',
+          600: '#059669',
+          700: '#047857',
+          800: '#065f46',
+          900: '#064e3b',
         },
-        dark: {
-          DEFAULT: '#333333',
-          lighter: '#575259',
-          darker: '#111011',
-        }
       },
       fontFamily: {
-        mono: ['Roboto Mono', 'monospace'],
-        sans: ['Quicksand', 'sans-serif'],
+        sans: ['Inter', 'Quicksand', 'sans-serif'],
       },
-      boxShadow: {
-        'neomorphic': '5px 5px 20px #575259, -5px -5px 20px #111011',
-        'neomorphic-hover': '-5px -5px 20px #111011, 5px 5px 10px #b2caff, 6px 6px 30px #99b9ff, -5px -5px 25px #111011',
-        'neomorphic-inset': 'inset 2px 2px 5px #111011, inset -5px -5px 10px #575259',
-        'neomorphic-active': 'inset 2px 2px 5px #111011, inset -5px -5px 10px #575259',
+      animation: {
+        'fade-in': 'fadeIn 0.5s ease-in-out',
+        'slide-up': 'slideUp 0.3s ease-out',
       },
-      transitionDuration: {
-        '400': '400ms',
-      }
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        slideUp: {
+          '0%': { transform: 'translateY(10px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+      },
     },
   },
   plugins: [],
