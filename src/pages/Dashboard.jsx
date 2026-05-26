@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import useAuthStore from '../store/authStore'
 import useThemeStore from '../store/themeStore'
@@ -23,7 +24,8 @@ import {
   CheckCircle2,
   Sparkles,
   Sun,
-  Moon
+  Moon,
+  ChevronRight
 } from 'lucide-react'
 
 export default function Dashboard() {
@@ -31,6 +33,7 @@ export default function Dashboard() {
   const { isDark, toggleTheme } = useThemeStore()
   const [activeTab, setActiveTab] = useState('job')
   const [logoError, setLogoError] = useState(false)
+  const navigate = useNavigate()
 
   const userName = profile?.full_name || user?.email?.split('@')[0] || 'User'
 
@@ -42,20 +45,33 @@ export default function Dashboard() {
   ]
 
   const modules = [
-    { icon: Users, label: 'Human Resources', description: 'Staff lifecycle, recruitment' },
-    { icon: CreditCard, label: 'Payroll', description: 'Salary, taxes, compliance' },
-    { icon: Truck, label: 'Fleet Management', description: 'Vehicle tracking, maintenance' },
-    { icon: Package, label: 'Inventory', description: 'Stock, supplies, warehouses' },
-    { icon: ShoppingCart, label: 'Procurement', description: 'Purchase orders, vendors' },
-    { icon: Landmark, label: 'Finance', description: 'Accounting, ledgers, budget' },
-    { icon: TrendingUp, label: 'Sales', description: 'Orders, CRM, invoicing' },
-    { icon: Database, label: 'Assets', description: 'Depreciation, asset register' },
-    { icon: Briefcase, label: 'Jobs', description: 'Work orders, task scheduling' },
-    { icon: Smartphone, label: 'Mobile Cleaner', description: 'Field app, route updates' },
-    { icon: FileText, label: 'Reporting', description: 'BI dashboards, export analytics' },
-    { icon: Calendar, label: 'Events', description: 'Scheduling, logistics, tasks' },
-    { icon: FolderOpen, label: 'Documents', description: 'DMS, contracts, cloud storage' },
+    { icon: Users, label: 'Human Resources', description: 'Staff lifecycle, recruitment', path: '/hr' },
+    { icon: CreditCard, label: 'Payroll', description: 'Salary, taxes, compliance', path: '/payroll' },
+    { icon: Truck, label: 'Fleet Management', description: 'Vehicle tracking, maintenance', path: '/fleet' },
+    { icon: Package, label: 'Inventory', description: 'Stock, supplies, warehouses', path: '/inventory' },
+    { icon: ShoppingCart, label: 'Procurement', description: 'Purchase orders, vendors', path: '/procurement' },
+    { icon: Landmark, label: 'Finance', description: 'Accounting, ledgers, budget', path: '/finance' },
+    { icon: TrendingUp, label: 'Sales', description: 'Orders, CRM, invoicing', path: '/sales' },
+    { icon: Database, label: 'Assets', description: 'Depreciation, asset register', path: '/assets' },
+    { icon: Briefcase, label: 'Jobs', description: 'Work orders, task scheduling', path: '/jobs' },
+    { icon: Smartphone, label: 'Mobile Cleaner', description: 'Field app, route updates', path: '/mobile' },
+    { icon: FileText, label: 'Reporting', description: 'BI dashboards, export analytics', path: '/reports' },
+    { icon: Calendar, label: 'Events', description: 'Scheduling, logistics, tasks', path: '/events' },
+    { icon: FolderOpen, label: 'Documents', description: 'DMS, contracts, cloud storage', path: '/documents' },
   ]
+
+  const handleModuleClick = (path) => {
+    // Only navigate if the module is available (HR module is built)
+    if (path === '/hr') {
+      navigate(path)
+    }
+    // Other modules will be available as they are built
+  }
+
+  const isModuleAvailable = (path) => {
+    // Currently only HR module is built
+    return path === '/hr'
+  }
 
   return (
     <div className={`min-h-screen font-['Inter'] transition-colors duration-300 ${isDark ? 'dark' : ''}`}>
@@ -90,7 +106,7 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col items-start">
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-800 dark:text-white">
-              Welcome {userName}
+              Welcome={userName}
             </h1>
             <p className="text-base text-slate-500 dark:text-slate-400 font-medium mt-1">
               Innovation Without End
@@ -136,21 +152,52 @@ export default function Dashboard() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {modules.map((module, index) => (
-              <motion.div
-                key={module.label}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="neu-raised rounded-2xl p-5 transition-all flex items-start gap-3 hover:scale-[1.02] cursor-pointer"
-              >
-                <module.icon className="w-8 h-8 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                <div>
-                  <h3 className="font-bold text-lg text-slate-800 dark:text-white">{module.label}</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{module.description}</p>
-                </div>
-              </motion.div>
-            ))}
+            {modules.map((module, index) => {
+              const available = isModuleAvailable(module.path)
+              
+              return (
+                <motion.div
+                  key={module.label}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  onClick={() => available && handleModuleClick(module.path)}
+                  className={`neu-raised rounded-2xl p-5 transition-all flex items-start gap-3 ${
+                    available 
+                      ? 'hover:scale-[1.02] cursor-pointer hover:shadow-lg' 
+                      : 'opacity-50 cursor-not-allowed'
+                  }`}
+                  title={available ? `Go to ${module.label}` : 'Coming soon'}
+                >
+                  <module.icon className={`w-8 h-8 flex-shrink-0 ${
+                    available ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'
+                  }`} />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h3 className={`font-bold text-lg ${
+                        available ? 'text-slate-800 dark:text-white' : 'text-slate-500'
+                      }`}>
+                        {module.label}
+                      </h3>
+                      {available && (
+                        <ChevronRight className="w-4 h-4 text-emerald-600" />
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{module.description}</p>
+                    {!available && (
+                      <span className="inline-block mt-2 text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-500 px-2 py-0.5 rounded-full">
+                        Coming Soon
+                      </span>
+                    )}
+                    {available && (
+                      <span className="inline-block mt-2 text-[10px] bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full">
+                        Active
+                      </span>
+                    )}
+                  </div>
+                </motion.div>
+              )
+            })}
           </div>
         </div>
 
@@ -321,6 +368,12 @@ export default function Dashboard() {
                     <div className="h-2 w-3/4 bg-emerald-500 rounded-full"></div>
                   </div>
                   <p className="text-xs mt-2 text-slate-500 dark:text-slate-400">75% attendance this week</p>
+                  <button 
+                    onClick={() => navigate('/hr')}
+                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
+                  >
+                    Go to HR Module
+                  </button>
                 </div>
 
                 <div className="neu-raised p-6 rounded-3xl stat-card">
@@ -354,6 +407,12 @@ export default function Dashboard() {
                       <span className="text-slate-500 dark:text-slate-400">35 hrs</span>
                     </li>
                   </ul>
+                  <button 
+                    onClick={() => navigate('/hr')}
+                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
+                  >
+                    View HR Details
+                  </button>
                 </div>
               </div>
             </motion.section>
