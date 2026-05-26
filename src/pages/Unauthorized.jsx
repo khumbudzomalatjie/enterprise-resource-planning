@@ -1,9 +1,11 @@
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ShieldOff, ArrowLeft, Home } from 'lucide-react'
+import { useState } from 'react'
 
 export default function Unauthorized() {
   const navigate = useNavigate()
+  const [logoError, setLogoError] = useState(false)
 
   return (
     <div className="min-h-screen bg-[#333] flex items-center justify-center p-4 font-sans">
@@ -25,6 +27,7 @@ export default function Unauthorized() {
           hover:shadow-[-5px_-5px_20px_#111011,5px_5px_10px_#b2caff,6px_6px_30px_#99b9ff,-5px_-5px_25px_#111011]
           hover:[text-shadow:0_0_2px_#fff,0_0_2px_#fff,0_0_2px_#fff,0_0_5px_#99b9ff,0_0_10px_#99b9ff,0_0_20px_#99b9ff,0_0_30px_#99b9ff,0_0_50px_#99b9ff]
         ">
+          {/* Logo */}
           <div className="flex justify-center mb-5">
             <div className="
               w-[90px] h-[90px] 
@@ -33,10 +36,20 @@ export default function Unauthorized() {
               bg-[rgba(255,255,255,0.05)]
               shadow-[inset_2px_2px_5px_#111011,inset_-5px_-5px_10px_#575259]
               p-2.5
+              overflow-hidden
             ">
-              <div className="w-full h-full rounded-full bg-red-500/20 flex items-center justify-center">
-                <ShieldOff className="w-10 h-10 text-red-400" />
-              </div>
+              {!logoError ? (
+                <img 
+                  src="/logo.png" 
+                  alt="Ndanduleni Group Logo"
+                  className="w-full h-full object-contain rounded-full"
+                  onError={() => setLogoError(true)}
+                />
+              ) : (
+                <div className="w-full h-full rounded-full bg-red-500/20 flex items-center justify-center">
+                  <ShieldOff className="w-10 h-10 text-red-400" />
+                </div>
+              )}
             </div>
           </div>
 
