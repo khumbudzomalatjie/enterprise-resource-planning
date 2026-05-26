@@ -27,6 +27,9 @@ export default {
         'neomorphic-hover': '-5px -5px 20px #111011, 5px 5px 10px #b2caff, 6px 6px 30px #99b9ff, -5px -5px 25px #111011',
         'neomorphic-inset': 'inset 2px 2px 5px #111011, inset -5px -5px 10px #575259',
         'neomorphic-active': 'inset 2px 2px 5px #111011, inset -5px -5px 10px #575259',
+      },
+      transitionDuration: {
+        '400': '400ms',
       }
     },
   },
