@@ -13,10 +13,19 @@ export default function ResetPassword() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (!user) {
-      // User must be logged in to reset password
-      navigate('/login')
+    // For reset password, user should be authenticated via reset link
+    const checkSession = async () => {
+      // Supabase handles this automatically via the reset link
+      // If no session, redirect to login
+      if (!user) {
+        // Check if we're coming from a reset link
+        const hash = window.location.hash
+        if (!hash.includes('type=recovery')) {
+          navigate('/login')
+        }
+      }
     }
+    checkSession()
   }, [user, navigate])
 
   const handleSubmit = async (e) => {
@@ -41,7 +50,9 @@ export default function ResetPassword() {
     
     if (result.success) {
       toast.success('Password reset successfully')
-      navigate('/dashboard')
+      setTimeout(() => {
+        navigate('/dashboard')
+      }, 1500)
     } else {
       toast.error(result.error || 'Failed to reset password')
     }
