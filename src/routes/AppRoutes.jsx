@@ -12,12 +12,12 @@ import { USER_ROLES } from '../types/authTypes'
 export default function AppRoutes() {
   return (
     <Routes>
-      {/* Public Routes - No authentication required */}
+      {/* Public Routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       
-      {/* Protected Routes - Authentication required */}
+      {/* Protected Routes */}
       <Route
         path="/dashboard"
         element={
@@ -27,7 +27,6 @@ export default function AppRoutes() {
         }
       />
       
-      {/* Admin Routes - Super Admin only */}
       <Route
         path="/users"
         element={
@@ -42,9 +41,9 @@ export default function AppRoutes() {
       {/* Error Routes */}
       <Route path="/unauthorized" element={<Unauthorized />} />
       
-      {/* Default Redirects */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      {/* Default - Redirect to login instead of dashboard */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   )
 }
