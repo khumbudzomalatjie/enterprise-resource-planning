@@ -1,4 +1,4 @@
-import { supabase } from '../../../lib/supabaseClient'
+import { supabase, getPublicUrl } from '../../../lib/supabaseClient'
 
 export const hrApi = {
   // Employees
@@ -13,6 +13,7 @@ export const hrApi = {
     if (filters.search) {
       query = query.or(`first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`)
     }
+    if (filters.limit) query = query.limit(filters.limit)
 
     const { data, error } = await query
     return { data, error }
@@ -95,6 +96,7 @@ export const hrApi = {
 
     if (filters.status) query = query.eq('status', filters.status)
     if (filters.employee_id) query = query.eq('employee_id', filters.employee_id)
+    if (filters.limit) query = query.limit(filters.limit)
 
     const { data, error } = await query
     return { data, error }
@@ -189,6 +191,123 @@ export const hrApi = {
       .select()
       .single()
     return { data, error }
+  },
+
+  // ============================================
+  // STORAGE FUNCTIONS
+  // ============================================
+
+  // Upload employee photo
+  async uploadEmployeePhoto(employeeId, file) {
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${employeeId}/photo.${fileExt}`
+    
+    const { data, error } = await supabase.storage
+      .from('employee-photos')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: true
+      })
+
+    if (error) return { error }
+    
+    // Get public URL
+    const publicUrl = getPublicUrl('employee-photos', fileName)
+    
+    // Update employee record with photo URL
+    await supabase
+      .from('employees')
+      .update({ profile_photo_url: publicUrl })
+      .eq('id', employeeId)
+
+    return { data: { path: fileName, url: publicUrl }, error: null }
+  },
+
+  // Upload employee document
+  async uploadEmployeeDocument(employeeId, file) {
+    const fileExt = file.name.split('.').pop()
+    const timestamp = Date.now()
+    const fileName = `${employeeId}/${timestamp}_${file.name}`
+    
+    const { data, error } = await supabase.storage
+      .from('employee-documents')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      })
+
+    if (error) return { error }
+
+    const publicUrl = getPublicUrl('employee-documents', fileName)
+
+    // Create document record
+    const { data: docData, error: docError } = await supabase
+      .from('employee_documents')
+      .insert([{
+        employee_id: employeeId,
+        document_type: 'other',
+        document_name: file.name,
+        document_url: publicUrl,
+        uploaded_by: (await supabase.auth.getUser()).data.user?.id
+      }])
+      .select()
+      .single()
+
+    if (docError) return { error: docError }
+
+    return { data: { ...docData, url: publicUrl }, error: null }
+  },
+
+  // Get employee documents
+  async getEmployeeDocuments(employeeId) {
+    const { data, error } = await supabase
+      .from('employee_documents')
+      .select('*')
+      .eq('employee_id', employeeId)
+      .order('uploaded_at', { ascending: false })
+
+    return { data, error }
+  },
+
+  // Delete employee document
+  async deleteEmployeeDocument(documentId) {
+    // First get the document to find the storage path
+    const { data: doc, error: fetchError } = await supabase
+      .from('employee_documents')
+      .select('*')
+      .eq('id', documentId)
+      .single()
+
+    if (fetchError) return { error: fetchError }
+
+    // Delete from storage
+    const urlParts = doc.document_url.split('/')
+    const storagePath = urlParts.slice(urlParts.indexOf('employee-documents') + 1).join('/')
+    
+    await supabase.storage
+      .from('employee-documents')
+      .remove([storagePath])
+
+    // Delete record
+    const { error } = await supabase
+      .from('employee_documents')
+      .delete()
+      .eq('id', documentId)
+
+    return { error }
+  },
+
+  // Get file for viewing/downloading
+  async getDocumentForView(documentId) {
+    const { data: doc, error } = await supabase
+      .from('employee_documents')
+      .select('*')
+      .eq('id', documentId)
+      .single()
+
+    if (error) return { error }
+
+    return { data: doc, error: null }
   },
 
   // Dashboard Stats
