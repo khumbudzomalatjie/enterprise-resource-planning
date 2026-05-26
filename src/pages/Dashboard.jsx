@@ -4,13 +4,13 @@ import useAuthStore from '../store/authStore'
 import Navbar from '../components/Navbar'
 import { 
   Users, 
-  Key, 
-  Shield, 
   Activity,
   Clock,
   UserCheck,
-  UserX,
-  TrendingUp
+  Shield,
+  TrendingUp,
+  Calendar,
+  AlertCircle
 } from 'lucide-react'
 
 export default function Dashboard() {
@@ -23,8 +23,7 @@ export default function Dashboard() {
   })
 
   useEffect(() => {
-    // Here you would fetch dashboard statistics
-    // For now, setting example data
+    // In production, fetch from API
     setStats({
       totalUsers: 125,
       activeSessions: 42,
@@ -49,6 +48,7 @@ export default function Dashboard() {
       value: stats.totalUsers,
       color: 'text-blue-400',
       bgColor: 'bg-blue-500/10',
+      trend: '+12%'
     },
     {
       icon: Activity,
@@ -56,6 +56,7 @@ export default function Dashboard() {
       value: stats.activeSessions,
       color: 'text-green-400',
       bgColor: 'bg-green-500/10',
+      trend: '+5%'
     },
     {
       icon: UserCheck,
@@ -63,6 +64,7 @@ export default function Dashboard() {
       value: 98,
       color: 'text-purple-400',
       bgColor: 'bg-purple-500/10',
+      trend: '98%'
     },
     {
       icon: Shield,
@@ -70,6 +72,7 @@ export default function Dashboard() {
       value: 8,
       color: 'text-yellow-400',
       bgColor: 'bg-yellow-500/10',
+      trend: 'Defined'
     },
   ]
 
@@ -85,10 +88,11 @@ export default function Dashboard() {
           className="mb-8"
         >
           <h1 className="text-3xl font-bold text-white mb-2">
-            Welcome back, {profile?.full_name || user?.email}
+            Welcome back, {profile?.full_name || user?.email?.split('@')[0]}
           </h1>
-          <p className="text-gray-400">
-            Here's what's happening with your authentication system today.
+          <p className="text-gray-400 flex items-center space-x-2">
+            <Calendar className="w-4 h-4" />
+            <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
           </p>
         </motion.div>
 
@@ -113,6 +117,7 @@ export default function Dashboard() {
                 <div className={`p-3 rounded-xl ${stat.bgColor}`}>
                   <stat.icon className={`w-6 h-6 ${stat.color}`} />
                 </div>
+                <span className="text-xs text-gray-400">{stat.trend}</span>
               </div>
               <div>
                 <p className="text-gray-400 text-sm mb-1">{stat.label}</p>
@@ -122,7 +127,7 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Additional Info Sections */}
+        {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Activity */}
           <motion.div
@@ -136,24 +141,40 @@ export default function Dashboard() {
               shadow-[5px_5px_20px_#2a2a2a,-5px_-5px_20px_#4a4a4a]
             "
           >
-            <div className="flex items-center space-x-3 mb-6">
-              <Clock className="w-5 h-5 text-primary" />
-              <h2 className="text-white text-xl font-semibold">Recent Activity</h2>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <Clock className="w-5 h-5 text-primary" />
+                <h2 className="text-white text-xl font-semibold">Recent Activity</h2>
+              </div>
+              <button className="text-primary text-sm hover:text-white transition-colors">
+                View All
+              </button>
             </div>
             
             <div className="space-y-4">
               {[
-                { user: 'John Doe', action: 'Logged in', time: '2 minutes ago' },
-                { user: 'Jane Smith', action: 'Password changed', time: '15 minutes ago' },
-                { user: 'Mike Johnson', action: 'Session expired', time: '1 hour ago' },
-                { user: 'Sarah Wilson', action: 'Role updated', time: '2 hours ago' },
+                { user: 'John Doe', action: 'Logged in successfully', time: '2 minutes ago', type: 'login' },
+                { user: 'Jane Smith', action: 'Changed password', time: '15 minutes ago', type: 'security' },
+                { user: 'Mike Johnson', action: 'Session expired', time: '1 hour ago', type: 'session' },
+                { user: 'Sarah Wilson', action: 'Role updated to Supervisor', time: '2 hours ago', type: 'admin' },
+                { user: 'Tom Brown', action: 'Account deactivated', time: '3 hours ago', type: 'warning' },
               ].map((activity, index) => (
-                <div key={index} className="flex items-center justify-between py-2 border-b border-gray-700 last:border-0">
-                  <div>
-                    <p className="text-white text-sm font-medium">{activity.user}</p>
-                    <p className="text-gray-400 text-xs">{activity.action}</p>
+                <div key={index} className="flex items-center justify-between py-3 border-b border-gray-700/50 last:border-0">
+                  <div className="flex items-start space-x-3">
+                    <div className={`
+                      w-2 h-2 rounded-full mt-2
+                      ${activity.type === 'login' ? 'bg-green-400' : ''}
+                      ${activity.type === 'security' ? 'bg-yellow-400' : ''}
+                      ${activity.type === 'session' ? 'bg-blue-400' : ''}
+                      ${activity.type === 'admin' ? 'bg-purple-400' : ''}
+                      ${activity.type === 'warning' ? 'bg-red-400' : ''}
+                    `}></div>
+                    <div>
+                      <p className="text-white text-sm font-medium">{activity.user}</p>
+                      <p className="text-gray-400 text-xs">{activity.action}</p>
+                    </div>
                   </div>
-                  <span className="text-gray-500 text-xs">{activity.time}</span>
+                  <span className="text-gray-500 text-xs whitespace-nowrap ml-4">{activity.time}</span>
                 </div>
               ))}
             </div>
@@ -171,64 +192,23 @@ export default function Dashboard() {
               shadow-[5px_5px_20px_#2a2a2a,-5px_-5px_20px_#4a4a4a]
             "
           >
-            <div className="flex items-center space-x-3 mb-6">
-              <TrendingUp className="w-5 h-5 text-primary" />
-              <h2 className="text-white text-xl font-semibold">Role Distribution</h2>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <TrendingUp className="w-5 h-5 text-primary" />
+                <h2 className="text-white text-xl font-semibold">Role Distribution</h2>
+              </div>
+              <span className="text-gray-400 text-sm">Total: {stats.totalUsers}</span>
             </div>
             
             <div className="space-y-4">
-              {Object.entries(stats.roleDistribution).map(([role, count]) => (
-                <div key={role} className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex justify-between mb-2">
-                      <span className="text-white text-sm capitalize">{role.replace('_', ' ')}</span>
-                      <span className="text-gray-400 text-sm">{count}</span>
-                    </div>
-                    <div className="w-full bg-gray-700 rounded-full h-2">
-                      <div
-                        className="bg-primary h-2 rounded-full transition-all duration-500"
-                        style={{ width: `${(count / stats.totalUsers) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Profile Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="mt-8 bg-[#3a3a3a] rounded-[2em] p-6 shadow-[5px_5px_20px_#2a2a2a,-5px_-5px_20px_#4a4a4a]"
-        >
-          <h2 className="text-white text-xl font-semibold mb-6">Your Profile</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="text-gray-400 text-sm block mb-1">Email</label>
-              <p className="text-white">{user?.email}</p>
-            </div>
-            
-            <div>
-              <label className="text-gray-400 text-sm block mb-1">Role</label>
-              <p className="text-white capitalize">{profile?.role?.replace('_', ' ') || 'Not assigned'}</p>
-            </div>
-            
-            <div>
-              <label className="text-gray-400 text-sm block mb-1">Full Name</label>
-              <p className="text-white">{profile?.full_name || 'Not set'}</p>
-            </div>
-            
-            <div>
-              <label className="text-gray-400 text-sm block mb-1">Last Sign In</label>
-              <p className="text-white">{user?.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : 'N/A'}</p>
-            </div>
-          </div>
-        </motion.div>
-      </main>
-    </div>
-  )
-}
+              {Object.entries(stats.roleDistribution).map(([role, count]) => {
+                const percentage = ((count / stats.totalUsers) * 100).toFixed(1)
+                const colors = {
+                  super_admin: 'bg-red-500',
+                  operations_manager: 'bg-blue-500',
+                  hr_manager: 'bg-purple-500',
+                  finance_officer: 'bg-yellow-500',
+                  supervisor: 'bg-green-500',
+                  cleaner: 'bg-cyan-500',
+                  sales_agent: 'bg-pink-500',
+                  customer: 'bg-orange-
