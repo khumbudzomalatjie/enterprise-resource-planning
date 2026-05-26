@@ -3,6 +3,7 @@ import ProtectedRoute from '../../../components/ProtectedRoute'
 import RoleBasedRoute from '../../../components/RoleBasedRoute'
 import HRDashboard from '../pages/HRDashboard'
 import EmployeeList from '../pages/EmployeeList'
+import EmployeeDetail from '../pages/EmployeeDetail'
 import { USER_ROLES } from '../../../types/authTypes'
 
 export default function HRRoutes() {
@@ -24,6 +25,16 @@ export default function HRRoutes() {
           <ProtectedRoute>
             <RoleBasedRoute requiredRoles={[USER_ROLES.SUPER_ADMIN, USER_ROLES.HR_MANAGER]}>
               <EmployeeList />
+            </RoleBasedRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/employees/:id"
+        element={
+          <ProtectedRoute>
+            <RoleBasedRoute requiredRoles={[USER_ROLES.SUPER_ADMIN, USER_ROLES.HR_MANAGER]}>
+              <EmployeeDetail />
             </RoleBasedRoute>
           </ProtectedRoute>
         }
