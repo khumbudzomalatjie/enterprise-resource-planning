@@ -10,11 +10,15 @@ const useAuthStore = create((set, get) => ({
 
   initialize: async () => {
     try {
-      set({ loading: true })
+      set({ loading: true, error: null })
       
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       
-      if (sessionError) throw sessionError
+      if (sessionError) {
+        console.error('Session error:', sessionError)
+        set({ loading: false })
+        return
+      }
       
       if (session?.user) {
         set({ 
@@ -40,7 +44,11 @@ const useAuthStore = create((set, get) => ({
         .eq('id', userId)
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching profile:', error)
+        return
+      }
+      
       set({ profile: data })
     } catch (error) {
       console.error('Error fetching profile:', error)
@@ -68,6 +76,7 @@ const useAuthStore = create((set, get) => ({
       
       return { success: true }
     } catch (error) {
+      console.error('Sign in error:', error)
       set({ error: error.message, loading: false })
       return { success: false, error: error.message }
     }
@@ -86,8 +95,12 @@ const useAuthStore = create((set, get) => ({
         session: null,
         loading: false 
       })
+      
+      return { success: true }
     } catch (error) {
+      console.error('Sign out error:', error)
       set({ error: error.message, loading: false })
+      return { success: false, error: error.message }
     }
   },
 
@@ -104,6 +117,7 @@ const useAuthStore = create((set, get) => ({
       set({ loading: false })
       return { success: true }
     } catch (error) {
+      console.error('Forgot password error:', error)
       set({ error: error.message, loading: false })
       return { success: false, error: error.message }
     }
@@ -122,6 +136,7 @@ const useAuthStore = create((set, get) => ({
       set({ loading: false })
       return { success: true }
     } catch (error) {
+      console.error('Reset password error:', error)
       set({ error: error.message, loading: false })
       return { success: false, error: error.message }
     }
@@ -138,8 +153,9 @@ const useAuthStore = create((set, get) => ({
 
       if (error) throw error
       set({ profile: data })
-      return { success: true }
+      return { success: true, data }
     } catch (error) {
+      console.error('Update profile error:', error)
       return { success: false, error: error.message }
     }
   },
@@ -154,7 +170,8 @@ const useAuthStore = create((set, get) => ({
       if (error) throw error
       return { success: true, data }
     } catch (error) {
-      return { success: false, error: error.message }
+      console.error('Get all users error:', error)
+      return { success: false, error: error.message, data: [] }
     }
   },
 
