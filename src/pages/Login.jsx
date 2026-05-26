@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import useAuthStore from '../store/authStore'
+import useThemeStore from '../store/themeStore'
 import toast from 'react-hot-toast'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Sun, Moon } from 'lucide-react'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -11,7 +12,12 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [logoError, setLogoError] = useState(false)
   const { signIn, loading } = useAuthStore()
+  const { isDark, toggleTheme, initTheme } = useThemeStore()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    initTheme()
+  }, [initTheme])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -32,7 +38,26 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-[#333] flex items-center justify-center p-4 font-sans">
+    <div className={`min-h-screen flex items-center justify-center p-4 font-['Inter'] transition-colors duration-300 ${
+      isDark 
+        ? 'bg-gradient-to-br from-slate-900 to-slate-800' 
+        : 'bg-gradient-to-br from-slate-100 to-slate-200'
+    }`}>
+      {/* Theme Toggle */}
+      <div className="fixed top-4 right-4 z-50">
+        <button 
+          onClick={toggleTheme}
+          className="neu-raised neu-btn w-12 h-12 rounded-2xl flex items-center justify-center hover:scale-110 transition-transform"
+          title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        >
+          {isDark ? (
+            <Sun className="w-6 h-6 text-amber-400" />
+          ) : (
+            <Moon className="w-6 h-6 text-slate-600" />
+          )}
+        </button>
+      </div>
+
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -40,16 +65,11 @@ export default function Login() {
         className="w-full max-w-[380px]"
       >
         <div className="
-          text-[#babecc] 
+          neu-raised
           w-full 
           p-[35px] 
-          rounded-[2em] 
-          bg-[#333]
-          transition-all duration-400
-          shadow-[5px_5px_20px_#575259,-5px_-5px_20px_#111011]
-          hover:text-white
-          hover:shadow-[-5px_-5px_20px_#111011,5px_5px_10px_#b2caff,6px_6px_30px_#99b9ff,-5px_-5px_25px_#111011]
-          hover:[text-shadow:0_0_2px_#fff,0_0_2px_#fff,0_0_2px_#fff,0_0_5px_#99b9ff,0_0_10px_#99b9ff,0_0_20px_#99b9ff,0_0_30px_#99b9ff,0_0_50px_#99b9ff]
+          rounded-[2em]
+          transition-all duration-300
         ">
           {/* Logo */}
           <div className="flex justify-center mb-5">
@@ -57,8 +77,7 @@ export default function Login() {
               w-[90px] h-[90px] 
               rounded-full 
               flex items-center justify-center
-              bg-[rgba(255,255,255,0.05)]
-              shadow-[inset_2px_2px_5px_#111011,inset_-5px_-5px_10px_#575259]
+              neu-inset
               p-2.5
               overflow-hidden
             ">
@@ -70,8 +89,8 @@ export default function Login() {
                   onError={() => setLogoError(true)}
                 />
               ) : (
-                <div className="w-full h-full rounded-full bg-primary/20 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-primary">NG</span>
+                <div className="w-full h-full rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                  <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">NG</span>
                 </div>
               )}
             </div>
@@ -79,8 +98,12 @@ export default function Login() {
 
           {/* Title */}
           <div className="text-center text-[25px] tracking-[2px]">
-            <h1 className="font-bold text-white mb-1">NDANDULENI GROUP</h1>
-            <p className="text-[15px] -mt-2 text-gray-400">Enterprise Resource Planning</p>
+            <h1 className="font-bold text-slate-800 dark:text-white mb-1">
+              NDANDULENI GROUP
+            </h1>
+            <p className="text-[15px] -mt-2 text-slate-500 dark:text-slate-400">
+              Enterprise Resource Planning
+            </p>
           </div>
 
           {/* Form */}
@@ -97,16 +120,12 @@ export default function Login() {
                   py-5 
                   text-[20px]
                   bg-transparent
-                  text-[#babecc]
-                  placeholder-[#babecc]
+                  text-slate-700 dark:text-slate-200
+                  placeholder-slate-400 dark:placeholder-slate-500
                   rounded-[25px]
-                  bg-[rgba(255,255,255,0.05)]
-                  shadow-[inset_2px_2px_5px_#111011,inset_-5px_-5px_10px_#575259]
+                  neu-inset
                   transition-all duration-300
-                  hover:text-white
-                  hover:placeholder-white
-                  focus:text-white
-                  focus:[text-shadow:0_0_2px_#fff,0_0_2px_#fff,0_0_2px_#99b9ff,0_0_5px_#99b9ff,0_0_5px_#99b9ff]
+                  focus:ring-2 focus:ring-emerald-500/50
                 "
               />
             </div>
@@ -123,23 +142,19 @@ export default function Login() {
                   py-5 
                   text-[20px]
                   bg-transparent
-                  text-[#babecc]
-                  placeholder-[#babecc]
+                  text-slate-700 dark:text-slate-200
+                  placeholder-slate-400 dark:placeholder-slate-500
                   rounded-[25px]
-                  bg-[rgba(255,255,255,0.05)]
-                  shadow-[inset_2px_2px_5px_#111011,inset_-5px_-5px_10px_#575259]
+                  neu-inset
                   transition-all duration-300
-                  hover:text-white
-                  hover:placeholder-white
-                  focus:text-white
-                  focus:[text-shadow:0_0_2px_#fff,0_0_2px_#fff,0_0_2px_#99b9ff,0_0_5px_#99b9ff,0_0_5px_#99b9ff]
                   pr-12
+                  focus:ring-2 focus:ring-emerald-500/50
                 "
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-[#babecc] hover:text-primary transition-colors"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
@@ -150,15 +165,11 @@ export default function Login() {
               <Link
                 to="/forgot-password"
                 className="
-                  text-[#babecc] 
+                  text-slate-500 dark:text-slate-400
                   text-[14px] 
                   no-underline 
                   transition-all duration-300
-                  hover:text-white
-                  hover:[text-shadow:0_0_2px_#fff,0_0_5px_#99b9ff,0_0_10px_#99b9ff]
-                  bg-transparent
-                  p-0
-                  m-0
+                  hover:text-emerald-600 dark:hover:text-emerald-400
                   inline-block
                 "
               >
@@ -177,19 +188,15 @@ export default function Login() {
                 py-5 
                 px-5 
                 mt-5 
-                text-[20px] 
-                text-[#babecc] 
-                bg-[#333] 
+                text-[20px]
+                font-medium
+                text-white
+                bg-gradient-to-br from-emerald-700 to-emerald-800
                 rounded-[25px]
-                shadow-[5px_5px_20px_#575259,-5px_-5px_20px_#111011]
-                cursor-pointer
+                neu-btn
+                shadow-lg
                 transition-all duration-300
-                hover:text-white
-                hover:shadow-[-5px_-5px_25px_#111011,3px_3px_10px_#b2caff,4px_4px_20px_#99b9ff,-5px_-5px_25px_#111011]
-                hover:[text-shadow:0_0_2px_#fff,0_0_2px_#fff,0_0_2px_#fff,0_0_5px_#99b9ff,0_0_10px_#99b9ff,0_0_20px_#99b9ff,0_0_30px_#99b9ff,0_0_50px_#99b9ff]
-                active:shadow-[inset_2px_2px_5px_#111011,inset_-5px_-5px_10px_#575259]
-                active:text-[#7fa8ff]
-                active:[text-shadow:0_0_2px_#99b9ff,0_0_2px_#99b9ff,0_0_2px_#99b9ff,0_0_5px_#99b9ff,0_0_10px_#99b9ff,0_0_20px_#99b9ff,0_0_30px_#99b9ff,0_0_50px_#99b9ff]
+                hover:from-emerald-600 hover:to-emerald-700
                 disabled:opacity-50
                 disabled:cursor-not-allowed
               "
