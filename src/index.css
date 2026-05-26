@@ -3,23 +3,104 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --neu-bg-primary: #eef2f8;
+    --neu-bg-secondary: #e2e8f0;
+    --neu-shadow-dark: #cbd5e1;
+    --neu-shadow-light: #ffffff;
+    --neu-primary: #2c7a4d;
+    --neu-text-primary: #1e293b;
+    --neu-text-secondary: #64748b;
+  }
+
+  .dark {
+    --neu-bg-primary: #1e293b;
+    --neu-bg-secondary: #0f172a;
+    --neu-shadow-dark: #020617;
+    --neu-shadow-light: #334155;
+    --neu-text-primary: #f1f5f9;
+    --neu-text-secondary: #94a3b8;
+  }
+
   * {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
   }
 
   body {
-    @apply bg-dark font-sans min-h-screen;
-    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(145deg, var(--neu-bg-primary), var(--neu-bg-secondary));
+    min-height: 100vh;
+    transition: background 0.4s ease;
   }
 
   #root {
-    @apply w-full min-h-screen;
+    min-height: 100vh;
   }
 
   input, button {
     border: none;
     outline: none;
+  }
+}
+
+@layer components {
+  /* Neumorphic Components */
+  .neu-raised {
+    background: linear-gradient(145deg, var(--neu-bg-primary), var(--neu-bg-secondary));
+    box-shadow: 8px 8px 16px var(--neu-shadow-dark), -8px -8px 16px var(--neu-shadow-light);
+  }
+
+  .neu-inset {
+    background: linear-gradient(145deg, var(--neu-bg-secondary), var(--neu-bg-primary));
+    box-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light);
+  }
+
+  .neu-btn {
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .neu-btn:active {
+    transform: scale(0.98);
+  }
+
+  .stat-card {
+    transition: 0.3s ease;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-5px);
+  }
+
+  .tab-btn[aria-selected="true"] {
+    background: linear-gradient(145deg, #2c7a4d, #1e5a3a);
+    color: white;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--neu-primary);
+    border-radius: 10px;
+  }
+
+  .skip-link {
+    position: absolute;
+    top: -100%;
+    left: 16px;
+    background: var(--neu-primary);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 40px;
+    z-index: 9999;
+  }
+
+  .skip-link:focus {
+    top: 16px;
   }
 }
