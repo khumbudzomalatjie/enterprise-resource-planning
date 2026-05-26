@@ -133,4 +133,90 @@ export default function HRDashboard() {
           {/* Recent Employees */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
-            animate
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+            className="neu-raised rounded-3xl p-6"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+                <Users className="w-5 h-5 text-emerald-600" />
+                Recent Employees
+              </h2>
+              <Link 
+                to="/hr/employees"
+                className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+              >
+                View All <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+            <div className="space-y-3">
+              {recentEmployees.map((emp) => (
+                <div key={emp.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/hr/employees/${emp.id}`)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                      <span className="text-emerald-600 font-semibold">
+                        {emp.first_name?.[0]}{emp.last_name?.[0]}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-800 dark:text-white">{emp.first_name} {emp.last_name}</p>
+                      <p className="text-xs text-slate-500">{emp.position || 'No position'}</p>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    emp.employment_status === 'active' 
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                      : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
+                  }`}>
+                    {emp.employment_status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Pending Leave Requests */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+            className="neu-raised rounded-3xl p-6"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-amber-600" />
+                Pending Leave Requests
+              </h2>
+              <Link 
+                to="/hr/leave"
+                className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+              >
+                View All <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+            <div className="space-y-3">
+              {pendingLeaves.map((leave) => (
+                <div key={leave.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors">
+                  <div>
+                    <p className="font-medium text-slate-800 dark:text-white text-sm">
+                      {leave.employees?.first_name} {leave.employees?.last_name}
+                    </p>
+                    <p className="text-xs text-slate-500">{leave.leave_types?.name} · {leave.total_days} days</p>
+                  </div>
+                  <span className="text-xs text-amber-600 bg-amber-100 dark:bg-amber-900/30 px-2 py-1 rounded-full">
+                    Pending
+                  </span>
+                </div>
+              ))}
+              {pendingLeaves.length === 0 && (
+                <p className="text-center text-slate-500 py-8">No pending leave requests</p>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      </main>
+    </div>
+  )
+}
