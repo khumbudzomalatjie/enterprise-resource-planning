@@ -7,7 +7,8 @@ import useThemeStore from '../../../store/themeStore'
 import toast from 'react-hot-toast'
 import { 
   Search, Filter, Plus, Users, UserPlus, ChevronRight,
-  ArrowLeft, Mail, Phone, MapPin, Briefcase, Sun, Moon, Sparkles
+  ArrowLeft, Mail, Phone, MapPin, Briefcase, Sun, Moon, Sparkles,
+  Pencil, Eye, Trash2
 } from 'lucide-react'
 
 export default function EmployeeList() {
@@ -33,6 +34,15 @@ export default function EmployeeList() {
   const handleSearch = (e) => {
     e.preventDefault()
     loadEmployees()
+  }
+
+  const handleEdit = (e, employeeId) => {
+    e.stopPropagation() // Prevent row click navigation
+    navigate(`/hr/employees/${employeeId}/edit`)
+  }
+
+  const handleView = (employeeId) => {
+    navigate(`/hr/employees/${employeeId}`)
   }
 
   return (
@@ -114,6 +124,8 @@ export default function EmployeeList() {
               <option value="cleaning">Cleaning</option>
               <option value="administration">Administration</option>
               <option value="sales">Sales</option>
+              <option value="hr">Human Resources</option>
+              <option value="finance">Finance</option>
             </select>
 
             <select
@@ -124,6 +136,7 @@ export default function EmployeeList() {
               <option value="all">All Status</option>
               <option value="active">Active</option>
               <option value="on_leave">On Leave</option>
+              <option value="inactive">Inactive</option>
               <option value="terminated">Terminated</option>
             </select>
 
@@ -150,15 +163,22 @@ export default function EmployeeList() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.03 }}
-                onClick={() => navigate(`/hr/employees/${emp.id}`)}
-                className="neu-raised rounded-2xl p-5 stat-card cursor-pointer hover:scale-[1.02]"
+                className="neu-raised rounded-2xl p-5 stat-card hover:scale-[1.02] transition-transform"
               >
+                {/* Top section - Avatar and Actions */}
                 <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                      <span className="text-emerald-600 font-semibold text-lg">
-                        {emp.first_name?.[0]}{emp.last_name?.[0]}
-                      </span>
+                  <div 
+                    className="flex items-center gap-3 cursor-pointer flex-1"
+                    onClick={() => handleView(emp.id)}
+                  >
+                    <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
+                      {emp.profile_photo_url ? (
+                        <img src={emp.profile_photo_url} alt="" className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        <span className="text-emerald-600 font-semibold text-lg">
+                          {emp.first_name?.[0]}{emp.last_name?.[0]}
+                        </span>
+                      )}
                     </div>
                     <div>
                       <h3 className="font-semibold text-slate-800 dark:text-white">
@@ -167,27 +187,55 @@ export default function EmployeeList() {
                       <p className="text-xs text-slate-500">{emp.employee_code}</p>
                     </div>
                   </div>
+                  
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {/* Edit Button - Pencil Icon */}
+                    <button
+                      onClick={(e) => handleEdit(e, emp.id)}
+                      className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                      title="Edit Employee"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    
+                    {/* View Button */}
+                    <button
+                      onClick={() => handleView(emp.id)}
+                      className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors"
+                      title="View Employee"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Status Badge */}
+                <div className="mb-3">
                   <span className={`px-2 py-1 rounded-full text-xs ${
                     emp.employment_status === 'active' 
                       ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                      : emp.employment_status === 'on_leave'
+                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
                       : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
                   }`}>
-                    {emp.employment_status}
+                    {emp.employment_status?.replace('_', ' ') || 'Unknown'}
                   </span>
                 </div>
 
+                {/* Details */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                    <Briefcase className="w-4 h-4" />
-                    <span>{emp.position || 'No position'}</span>
+                    <Briefcase className="w-4 h-4 flex-shrink-0" />
+                    <span className="truncate">{emp.position || 'No position'}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                    <Mail className="w-4 h-4" />
+                    <Mail className="w-4 h-4 flex-shrink-0" />
                     <span className="truncate">{emp.email}</span>
                   </div>
                   {emp.phone && (
                     <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                      <Phone className="w-4 h-4" />
+                      <Phone className="w-4 h-4 flex-shrink-0" />
                       <span>{emp.phone}</span>
                     </div>
                   )}
