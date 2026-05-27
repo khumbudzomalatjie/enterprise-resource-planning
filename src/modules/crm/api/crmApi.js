@@ -15,7 +15,11 @@ export const crmApi = {
     }
 
     const { data, error } = await query
-    return { data, error }
+    if (error) {
+      console.error('getClients error:', error)
+      return { data: [], error }
+    }
+    return { data: data || [], error: null }
   },
 
   async getClient(id) {
@@ -28,12 +32,51 @@ export const crmApi = {
   },
 
   async createClient(clientData) {
+    console.log('API: Creating client with data:', clientData) // Debug log
+    
+    // Ensure required fields
+    if (!clientData.company_name) {
+      return { data: null, error: { message: 'Company name is required' } }
+    }
+
     const { data, error } = await supabase
       .from('clients')
-      .insert([clientData])
+      .insert([{
+        company_name: clientData.company_name,
+        trading_name: clientData.trading_name || null,
+        registration_number: clientData.registration_number || null,
+        tax_number: clientData.tax_number || null,
+        vat_number: clientData.vat_number || null,
+        industry: clientData.industry || null,
+        client_type: clientData.client_type || 'corporate',
+        client_status: clientData.client_status || 'active',
+        email: clientData.email || null,
+        phone: clientData.phone || null,
+        alternative_phone: clientData.alternative_phone || null,
+        website: clientData.website || null,
+        address_line1: clientData.address_line1 || null,
+        address_line2: clientData.address_line2 || null,
+        city: clientData.city || null,
+        state: clientData.state || null,
+        postal_code: clientData.postal_code || null,
+        country: clientData.country || 'South Africa',
+        billing_address: clientData.billing_address || null,
+        payment_terms: clientData.payment_terms || '30_days',
+        credit_limit: clientData.credit_limit || null,
+        tax_exempt: clientData.tax_exempt || false,
+        client_rating: clientData.client_rating || 'unrated',
+        notes: clientData.notes || null,
+      }])
       .select()
       .single()
-    return { data, error }
+
+    if (error) {
+      console.error('createClient error:', error)
+      return { data: null, error }
+    }
+
+    console.log('API: Client created:', data) // Debug log
+    return { data, error: null }
   },
 
   async updateClient(id, updates) {
@@ -56,23 +99,13 @@ export const crmApi = {
     if (clientId) query = query.eq('client_id', clientId)
 
     const { data, error } = await query
-    return { data, error }
+    return { data: data || [], error }
   },
 
   async createContact(contactData) {
     const { data, error } = await supabase
       .from('client_contacts')
       .insert([contactData])
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  async updateContact(id, updates) {
-    const { data, error } = await supabase
-      .from('client_contacts')
-      .update(updates)
-      .eq('id', id)
       .select()
       .single()
     return { data, error }
@@ -88,23 +121,13 @@ export const crmApi = {
     if (clientId) query = query.eq('client_id', clientId)
 
     const { data, error } = await query
-    return { data, error }
+    return { data: data || [], error }
   },
 
   async createInteraction(interactionData) {
     const { data, error } = await supabase
       .from('client_interactions')
       .insert([interactionData])
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  async updateInteraction(id, updates) {
-    const { data, error } = await supabase
-      .from('client_interactions')
-      .update(updates)
-      .eq('id', id)
       .select()
       .single()
     return { data, error }
@@ -117,7 +140,7 @@ export const crmApi = {
       .select('*')
       .eq('is_active', true)
       .order('name')
-    return { data, error }
+    return { data: data || [], error }
   },
 
   async getClientServices(clientId = null) {
@@ -129,7 +152,7 @@ export const crmApi = {
     if (clientId) query = query.eq('client_id', clientId)
 
     const { data, error } = await query
-    return { data, error }
+    return { data: data || [], error }
   },
 
   async createClientService(serviceData) {
@@ -153,7 +176,7 @@ export const crmApi = {
     if (filters.assigned_to) query = query.eq('assigned_to', filters.assigned_to)
 
     const { data, error } = await query
-    return { data, error }
+    return { data: data || [], error }
   },
 
   async createPipelineItem(itemData) {
@@ -185,7 +208,7 @@ export const crmApi = {
     if (clientId) query = query.eq('client_id', clientId)
 
     const { data, error } = await query
-    return { data, error }
+    return { data: data || [], error }
   },
 
   async createFeedback(feedbackData) {
@@ -197,47 +220,47 @@ export const crmApi = {
     return { data, error }
   },
 
-  // Documents
-  async getDocuments(clientId = null) {
-    let query = supabase
-      .from('client_documents')
-      .select('*, clients(company_name)')
-      .order('created_at', { ascending: false })
-
-    if (clientId) query = query.eq('client_id', clientId)
-
-    const { data, error } = await query
-    return { data, error }
-  },
-
   // Dashboard Stats
   async getCRMStats() {
-    const [
-      { count: totalClients },
-      { count: activeClients },
-      { count: pipelineValue },
-      { count: openFeedback },
-      { data: pipeline },
-      { data: recentInteractions }
-    ] = await Promise.all([
-      supabase.from('clients').select('*', { count: 'exact', head: true }),
-      supabase.from('clients').select('*', { count: 'exact', head: true }).eq('client_status', 'active'),
-      supabase.from('sales_pipeline').select('*', { count: 'exact', head: true }).eq('stage', 'proposal_sent'),
-      supabase.from('client_feedback').select('*', { count: 'exact', head: true }).eq('status', 'open'),
-      supabase.from('sales_pipeline').select('*, clients(company_name)').order('created_at', { ascending: false }).limit(10),
-      supabase.from('client_interactions').select('*, clients(company_name)').order('scheduled_date', { ascending: false }).limit(5)
-    ])
+    try {
+      const [
+        { count: totalClients },
+        { count: activeClients },
+        { count: pipelineValue },
+        { count: openFeedback },
+        { data: pipeline },
+        { data: recentInteractions }
+      ] = await Promise.all([
+        supabase.from('clients').select('*', { count: 'exact', head: true }),
+        supabase.from('clients').select('*', { count: 'exact', head: true }).eq('client_status', 'active'),
+        supabase.from('sales_pipeline').select('*', { count: 'exact', head: true }).eq('stage', 'proposal_sent'),
+        supabase.from('client_feedback').select('*', { count: 'exact', head: true }).eq('status', 'open'),
+        supabase.from('sales_pipeline').select('*, clients(company_name)').order('created_at', { ascending: false }).limit(10),
+        supabase.from('client_interactions').select('*, clients(company_name)').order('scheduled_date', { ascending: false }).limit(5)
+      ])
 
-    const totalPipelineValue = pipeline?.reduce((sum, item) => sum + (item.estimated_value || 0), 0) || 0
+      const totalPipelineValue = (pipeline || []).reduce((sum, item) => sum + (item.estimated_value || 0), 0)
 
-    return {
-      totalClients: totalClients || 0,
-      activeClients: activeClients || 0,
-      pipelineOpportunities: pipelineValue || 0,
-      openFeedback: openFeedback || 0,
-      totalPipelineValue,
-      pipeline: pipeline || [],
-      recentInteractions: recentInteractions || []
+      return {
+        totalClients: totalClients || 0,
+        activeClients: activeClients || 0,
+        pipelineOpportunities: pipelineValue || 0,
+        openFeedback: openFeedback || 0,
+        totalPipelineValue,
+        pipeline: pipeline || [],
+        recentInteractions: recentInteractions || []
+      }
+    } catch (error) {
+      console.error('getCRMStats error:', error)
+      return {
+        totalClients: 0,
+        activeClients: 0,
+        pipelineOpportunities: 0,
+        openFeedback: 0,
+        totalPipelineValue: 0,
+        pipeline: [],
+        recentInteractions: []
+      }
     }
   }
 }
