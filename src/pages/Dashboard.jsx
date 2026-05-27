@@ -28,8 +28,7 @@ import {
   Sun,
   Moon,
   UserPlus,
-  Shield,
-  ClipboardList
+  Shield
 } from 'lucide-react'
 
 export default function Dashboard() {
@@ -66,8 +65,8 @@ export default function Dashboard() {
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.FINANCE_OFFICER, USER_ROLES.HR_MANAGER]
     },
     { 
-      icon: ClipboardList, 
-      label: 'Operations & Jobs', 
+      icon: Briefcase, 
+      label: 'Jobs', 
       description: 'Job management, scheduling, routes, teams',
       path: '/operations',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SUPERVISOR]
