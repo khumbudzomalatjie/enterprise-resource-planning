@@ -10,35 +10,35 @@ import toast from 'react-hot-toast'
 import { 
   FileText, Plus, Trash2, Download, Eye,
   Sun, Moon, Sparkles, ChevronRight,
-  Save, Send, Calculator
+  Save, Send
 } from 'lucide-react'
 
-// Pre-defined services
+// UPDATED Pre-defined services with new prices
 const SERVICES = [
   // Once-Off Cleaning
-  { category: 'Once-Off Cleaning', name: '1 Bedroom - Once-Off', unit_price: 1275, unit: 'per_service' },
-  { category: 'Once-Off Cleaning', name: '2 Bedroom - Once-Off', unit_price: 1700, unit: 'per_service' },
-  { category: 'Once-Off Cleaning', name: '3 Bedroom - Once-Off', unit_price: 2295, unit: 'per_service' },
-  { category: 'Once-Off Cleaning', name: '4 Bedroom - Once-Off', unit_price: 2975, unit: 'per_service' },
-  { category: 'Once-Off Cleaning', name: '5 Bedroom - Once-Off', unit_price: 3400, unit: 'per_service' },
+  { category: 'Once-Off Cleaning', name: '1 Bedroom - Once-Off', unit_price: 1304.35, unit: 'per_service' },
+  { category: 'Once-Off Cleaning', name: '2 Bedroom - Once-Off', unit_price: 1739.13, unit: 'per_service' },
+  { category: 'Once-Off Cleaning', name: '3 Bedroom - Once-Off', unit_price: 2347.83, unit: 'per_service' },
+  { category: 'Once-Off Cleaning', name: '4 Bedroom - Once-Off', unit_price: 3043.48, unit: 'per_service' },
+  { category: 'Once-Off Cleaning', name: '5 Bedroom - Once-Off', unit_price: 3478.26, unit: 'per_service' },
   // Monthly Contracts - 1x per Week
-  { category: 'Monthly Contract (1x Week)', name: '1 Bedroom - 1x Week', unit_price: 850, unit: 'per_month' },
-  { category: 'Monthly Contract (1x Week)', name: '2 Bedroom - 1x Week', unit_price: 1020, unit: 'per_month' },
-  { category: 'Monthly Contract (1x Week)', name: '3 Bedroom - 1x Week', unit_price: 1360, unit: 'per_month' },
-  { category: 'Monthly Contract (1x Week)', name: '4 Bedroom - 1x Week', unit_price: 1700, unit: 'per_month' },
-  { category: 'Monthly Contract (1x Week)', name: '5 Bedroom - 1x Week', unit_price: 2125, unit: 'per_month' },
+  { category: 'Monthly Contract (1x Week)', name: '1 Bedroom - 1x Week', unit_price: 869.57, unit: 'per_month' },
+  { category: 'Monthly Contract (1x Week)', name: '2 Bedroom - 1x Week', unit_price: 1043.48, unit: 'per_month' },
+  { category: 'Monthly Contract (1x Week)', name: '3 Bedroom - 1x Week', unit_price: 1391.30, unit: 'per_month' },
+  { category: 'Monthly Contract (1x Week)', name: '4 Bedroom - 1x Week', unit_price: 1739.13, unit: 'per_month' },
+  { category: 'Monthly Contract (1x Week)', name: '5 Bedroom - 1x Week', unit_price: 2173.91, unit: 'per_month' },
   // Monthly Contracts - 2x per Week
-  { category: 'Monthly Contract (2x Week)', name: '1 Bedroom - 2x Week', unit_price: 1530, unit: 'per_month' },
-  { category: 'Monthly Contract (2x Week)', name: '2 Bedroom - 2x Week', unit_price: 1870, unit: 'per_month' },
-  { category: 'Monthly Contract (2x Week)', name: '3 Bedroom - 2x Week', unit_price: 2380, unit: 'per_month' },
-  { category: 'Monthly Contract (2x Week)', name: '4 Bedroom - 2x Week', unit_price: 3060, unit: 'per_month' },
-  { category: 'Monthly Contract (2x Week)', name: '5 Bedroom - 2x Week', unit_price: 3825, unit: 'per_month' },
+  { category: 'Monthly Contract (2x Week)', name: '1 Bedroom - 2x Week', unit_price: 1565.22, unit: 'per_month' },
+  { category: 'Monthly Contract (2x Week)', name: '2 Bedroom - 2x Week', unit_price: 1913.04, unit: 'per_month' },
+  { category: 'Monthly Contract (2x Week)', name: '3 Bedroom - 2x Week', unit_price: 2434.78, unit: 'per_month' },
+  { category: 'Monthly Contract (2x Week)', name: '4 Bedroom - 2x Week', unit_price: 3130.43, unit: 'per_month' },
+  { category: 'Monthly Contract (2x Week)', name: '5 Bedroom - 2x Week', unit_price: 3913.04, unit: 'per_month' },
   // Monthly Contracts - 3x per Week
-  { category: 'Monthly Contract (3x Week)', name: '1 Bedroom - 3x Week', unit_price: 2125, unit: 'per_month' },
-  { category: 'Monthly Contract (3x Week)', name: '2 Bedroom - 3x Week', unit_price: 2550, unit: 'per_month' },
-  { category: 'Monthly Contract (3x Week)', name: '3 Bedroom - 3x Week', unit_price: 2975, unit: 'per_month' },
-  { category: 'Monthly Contract (3x Week)', name: '4 Bedroom - 3x Week', unit_price: 3825, unit: 'per_month' },
-  { category: 'Monthly Contract (3x Week)', name: '5 Bedroom - 3x Week', unit_price: 4675, unit: 'per_month' },
+  { category: 'Monthly Contract (3x Week)', name: '1 Bedroom - 3x Week', unit_price: 2173.91, unit: 'per_month' },
+  { category: 'Monthly Contract (3x Week)', name: '2 Bedroom - 3x Week', unit_price: 2608.70, unit: 'per_month' },
+  { category: 'Monthly Contract (3x Week)', name: '3 Bedroom - 3x Week', unit_price: 3043.48, unit: 'per_month' },
+  { category: 'Monthly Contract (3x Week)', name: '4 Bedroom - 3x Week', unit_price: 3913.04, unit: 'per_month' },
+  { category: 'Monthly Contract (3x Week)', name: '5 Bedroom - 3x Week', unit_price: 4782.61, unit: 'per_month' },
 ]
 
 export default function CreateQuotation() {
@@ -72,7 +72,7 @@ export default function CreateQuotation() {
   }, [])
 
   // ============================================
-  // LIVE CALCULATOR FUNCTIONS
+  // BACKGROUND CALCULATOR (Runs silently)
   // ============================================
   const calculateLineTotal = (item) => {
     const qty = item.quantity || 0
@@ -92,15 +92,10 @@ export default function CreateQuotation() {
     return calculateSubtotal() + calculateVAT()
   }
 
-  const calculateDeposit = () => {
-    return calculateTotal() * 0.5
-  }
-
+  // Computed values (used in background for PDF and saving)
   const subtotal = calculateSubtotal()
   const vatAmount = calculateVAT()
   const totalAmount = calculateTotal()
-  const depositAmount = calculateDeposit()
-  const balanceAmount = totalAmount - depositAmount
 
   // ============================================
   // CLIENT & SERVICE HANDLERS
@@ -236,8 +231,8 @@ export default function CreateQuotation() {
     return new Intl.NumberFormat('en-ZA', {
       style: 'currency',
       currency: 'ZAR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount || 0)
   }
 
@@ -292,9 +287,9 @@ export default function CreateQuotation() {
         </div>
 
         {/* Quotation Form */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Form - Left Side (2 columns) */}
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Form - Left Side */}
+          <div className="space-y-6">
             {/* Client Selection */}
             <div className="neu-raised rounded-3xl p-6">
               <h2 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Client Information</h2>
@@ -385,26 +380,6 @@ export default function CreateQuotation() {
                   </div>
                 ))}
               </div>
-
-              {/* Running Totals inside Services Card */}
-              {items.some(item => item.unit_price > 0) && (
-                <div className="mt-4 p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Subtotal (Excl. VAT):</span>
-                      <span className="font-medium text-slate-700 dark:text-slate-300">{formatCurrency(subtotal)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">VAT (15%):</span>
-                      <span className="font-medium text-slate-700 dark:text-slate-300">{formatCurrency(vatAmount)}</span>
-                    </div>
-                    <div className="flex justify-between pt-2 border-t border-slate-200 dark:border-slate-600">
-                      <span className="font-semibold text-emerald-600">Total (Incl. VAT):</span>
-                      <span className="font-bold text-lg text-emerald-600">{formatCurrency(totalAmount)}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Dates & Notes */}
@@ -420,76 +395,16 @@ export default function CreateQuotation() {
             </div>
           </div>
 
-          {/* Calculator Sidebar - Right Side (1 column) */}
-          <div className="space-y-4 lg:sticky lg:top-24 h-fit">
-            {/* LIVE CALCULATOR */}
-            <div className="neu-raised rounded-3xl p-6 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-700">
-              <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                <Calculator className="w-5 h-5 text-emerald-600" />
-                Live Calculator
-              </h3>
-              
-              {/* Services Summary */}
-              <div className="space-y-3 mb-4">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Services Added</p>
-                {items.filter(item => item.description).map((item, idx) => (
-                  <div key={idx} className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
-                    <span className="truncate max-w-[180px]">{item.description}</span>
-                    <span className="font-medium">{formatCurrency(calculateLineTotal(item))}</span>
-                  </div>
-                ))}
-                {items.filter(item => item.description).length === 0 && (
-                  <p className="text-xs text-slate-400 italic">No services added yet</p>
-                )}
-              </div>
-
-              {/* Divider */}
-              <div className="border-t border-slate-200 dark:border-slate-600 my-4"></div>
-
-              {/* Calculation Breakdown */}
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Subtotal:</span>
-                  <span className="font-medium text-slate-700 dark:text-slate-300">{formatCurrency(subtotal)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">VAT (15%):</span>
-                  <span className="font-medium text-slate-700 dark:text-slate-300">+ {formatCurrency(vatAmount)}</span>
-                </div>
-                
-                {/* Total - Highlighted */}
-                <div className="flex justify-between pt-3 border-t-2 border-emerald-200 dark:border-emerald-800">
-                  <span className="font-bold text-base text-slate-800 dark:text-white">TOTAL (Incl. VAT):</span>
-                  <span className="font-bold text-xl text-emerald-600">{formatCurrency(totalAmount)}</span>
-                </div>
-
-                {/* 50% Deposit */}
-                <div className="flex justify-between pt-2 border-t border-dashed border-slate-200 dark:border-slate-600">
-                  <span className="text-slate-500 text-xs">50% Deposit Required:</span>
-                  <span className="font-semibold text-sm text-amber-600">{formatCurrency(depositAmount)}</span>
-                </div>
-
-                {/* Balance */}
-                <div className="flex justify-between">
-                  <span className="text-slate-500 text-xs">Balance on Completion:</span>
-                  <span className="font-semibold text-sm text-blue-600">{formatCurrency(balanceAmount)}</span>
-                </div>
-              </div>
-
-              {/* VAT Notice */}
-              <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl text-xs text-amber-700 dark:text-amber-400 text-center">
-                ⚠ All prices exclude VAT. 15% VAT added to final amount.
-              </div>
-            </div>
-
-            {/* Preview Button */}
+          {/* Preview - Right Side */}
+          <div className="lg:sticky lg:top-24 h-fit space-y-4">
+            {/* A4 Preview */}
             <div className="neu-raised rounded-3xl p-4">
               <h3 className="text-sm font-semibold text-slate-800 dark:text-white mb-3 flex items-center gap-2">
                 <Eye className="w-4 h-4 text-emerald-600" />
                 A4 Preview
               </h3>
-              <div className="bg-white rounded-xl overflow-hidden shadow-inner border border-slate-200" style={{ maxHeight: '350px', overflow: 'auto' }}>
-                <div style={{ transform: 'scale(0.32)', transformOrigin: 'top left', width: '312%' }}>
+              <div className="bg-white rounded-xl overflow-hidden shadow-inner border border-slate-200" style={{ maxHeight: '500px', overflow: 'auto' }}>
+                <div style={{ transform: 'scale(0.38)', transformOrigin: 'top left', width: '263%' }}>
                   <QuotationPDF 
                     ref={pdfRef}
                     quotation={{ 
