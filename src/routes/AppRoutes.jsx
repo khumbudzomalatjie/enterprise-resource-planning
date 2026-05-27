@@ -10,17 +10,24 @@ import Unauthorized from '../pages/Unauthorized'
 import HRRoutes from '../modules/hr/routes/HRRoutes'
 import PayrollRoutes from '../modules/payroll/routes/PayrollRoutes'
 import CRMRoutes from '../modules/crm/routes/CRMRoutes'
+import SalesRoutes from '../modules/sales/routes/SalesRoutes'
 import { USER_ROLES } from '../types/authTypes'
 
 export default function AppRoutes() {
   return (
     <Routes>
-      {/* Public Routes */}
+      {/* ============================================ */}
+      {/* PUBLIC ROUTES - No Authentication Required   */}
+      {/* ============================================ */}
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       
-      {/* Protected Routes */}
+      {/* ============================================ */}
+      {/* PROTECTED ROUTES - Authentication Required    */}
+      {/* ============================================ */}
+      
+      {/* Main Dashboard - All authenticated users */}
       <Route
         path="/dashboard"
         element={
@@ -30,12 +37,57 @@ export default function AppRoutes() {
         }
       />
       
-      {/* Module Routes */}
-      <Route path="/hr/*" element={<HRRoutes />} />
-      <Route path="/payroll/*" element={<PayrollRoutes />} />
-      <Route path="/crm/*" element={<CRMRoutes />} />
+      {/* ============================================ */}
+      {/* MODULE 1 - HR MANAGEMENT                     */}
+      {/* ============================================ */}
+      <Route 
+        path="/hr/*" 
+        element={
+          <ProtectedRoute>
+            <HRRoutes />
+          </ProtectedRoute>
+        } 
+      />
       
-      {/* Admin Routes */}
+      {/* ============================================ */}
+      {/* MODULE 2 - PAYROLL MANAGEMENT                */}
+      {/* ============================================ */}
+      <Route 
+        path="/payroll/*" 
+        element={
+          <ProtectedRoute>
+            <PayrollRoutes />
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* ============================================ */}
+      {/* MODULE 4 - CRM & CLIENT MANAGEMENT           */}
+      {/* ============================================ */}
+      <Route 
+        path="/crm/*" 
+        element={
+          <ProtectedRoute>
+            <CRMRoutes />
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* ============================================ */}
+      {/* MODULE 5 - SALES & QUOTATIONS                */}
+      {/* ============================================ */}
+      <Route 
+        path="/sales/*" 
+        element={
+          <ProtectedRoute>
+            <SalesRoutes />
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* ============================================ */}
+      {/* ADMIN ROUTES - Super Admin Only              */}
+      {/* ============================================ */}
       <Route
         path="/users"
         element={
@@ -47,10 +99,14 @@ export default function AppRoutes() {
         }
       />
       
-      {/* Error Routes */}
+      {/* ============================================ */}
+      {/* ERROR ROUTES                                 */}
+      {/* ============================================ */}
       <Route path="/unauthorized" element={<Unauthorized />} />
       
-      {/* Default */}
+      {/* ============================================ */}
+      {/* DEFAULT REDIRECTS                            */}
+      {/* ============================================ */}
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
