@@ -21,6 +21,7 @@ export default function QuotationList() {
   const [actionMenu, setActionMenu] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [acceptConfirm, setAcceptConfirm] = useState(null)
+  const [acceptingId, setAcceptingId] = useState(null)
 
   useEffect(() => {
     loadQuotations()
@@ -55,13 +56,19 @@ export default function QuotationList() {
     setActionMenu(null)
   }
 
-  const handleAcceptQuotation = async (id) => {
-    const result = await acceptQuotation(id)
+  const handleAcceptQuotation = async () => {
+    if (!acceptConfirm) return
+    
+    setAcceptingId(acceptConfirm)
+    const result = await acceptQuotation(acceptConfirm)
+    setAcceptingId(null)
+    
     if (result.success) {
       toast.success('Quotation accepted! Job created successfully! 🎉', { duration: 5000 })
       if (result.data?.job) {
         toast.success(`Job #${result.data.job.job_number} created`, { duration: 4000 })
       }
+      // Reload quotations - the accepted one is already removed from state
       loadQuotations()
     } else {
       toast.error('Failed to accept quotation: ' + (result.error || 'Unknown error'))
@@ -70,6 +77,7 @@ export default function QuotationList() {
   }
 
   const handleDelete = async (id) => {
+    setDeleteConfirm(null)
     const result = await deleteQuotation(id)
     if (result.success) {
       toast.success('Quotation deleted')
@@ -77,7 +85,32 @@ export default function QuotationList() {
     } else {
       toast.error('Failed to delete')
     }
-    setDeleteConfirm(null)
+  }
+
+  const handleDownloadPDF = async (quotation) => {
+    try {
+      const html2pdf = (await import('html2pdf.js')).default
+      const tempDiv = document.createElement('div')
+      tempDiv.innerHTML = `<div style="padding:20px;font-family:Arial;">
+        <h2>Quotation ${quotation.quotation_number}</h2>
+        <p>Client: ${quotation.client_name || quotation.clients?.company_name}</p>
+        <p>Total: ${formatCurrency(quotation.total_amount)}</p>
+        <p>Status: ${quotation.status}</p>
+      </div>`
+      
+      const opt = {
+        margin: 10,
+        filename: `Quotation_${quotation.quotation_number}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      }
+
+      await html2pdf().set(opt).from(tempDiv).save()
+      toast.success('PDF downloaded')
+    } catch (error) {
+      toast.error('Failed to download PDF')
+    }
   }
 
   const formatCurrency = (amount) => {
@@ -166,7 +199,7 @@ export default function QuotationList() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="neu-raised rounded-3xl overflow-hidden">
-          {loading ? (
+          {loading && !acceptingId ? (
             <div className="text-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div><p className="text-slate-500">Loading...</p></div>
           ) : quotations.length === 0 ? (
             <div className="text-center py-12"><FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" /><p className="text-slate-500 text-lg">No quotations found</p></div>
@@ -185,7 +218,7 @@ export default function QuotationList() {
                 </thead>
                 <tbody>
                   {quotations.map((quote) => (
-                    <tr key={quote.id} className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                    <tr key={quote.id} className={`border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 ${acceptingId === quote.id ? 'opacity-50' : ''}`}>
                       <td className="py-3 px-4"><p className="font-medium text-slate-800 dark:text-white text-sm">{quote.quotation_number}</p></td>
                       <td className="py-3 px-4"><p className="text-sm text-slate-700 dark:text-slate-300">{quote.clients?.company_name || quote.client_name || 'N/A'}</p></td>
                       <td className="py-3 px-4"><p className="text-sm text-slate-600">{formatDate(quote.quotation_date)}</p></td>
@@ -199,6 +232,7 @@ export default function QuotationList() {
                         <div className="flex items-center justify-end gap-1">
                           <button onClick={() => navigate(`/sales/quotations/${quote.id}`)} className="p-2 rounded-lg hover:bg-blue-100 text-slate-400 hover:text-blue-600" title="View"><Eye className="w-4 h-4" /></button>
                           <button onClick={() => navigate(`/sales/quotations/${quote.id}/edit`)} className="p-2 rounded-lg hover:bg-emerald-100 text-slate-400 hover:text-emerald-600" title="Edit"><Edit className="w-4 h-4" /></button>
+                          <button onClick={() => handleDownloadPDF(quote)} className="p-2 rounded-lg hover:bg-purple-100 text-slate-400 hover:text-purple-600" title="Download PDF"><Download className="w-4 h-4" /></button>
                           <div className="relative">
                             <button onClick={() => setActionMenu(actionMenu === quote.id ? null : quote.id)} className="p-2 rounded-lg hover:bg-amber-100 text-slate-400 hover:text-amber-600" title="Status"><MoreVertical className="w-4 h-4" /></button>
                             {actionMenu === quote.id && (
@@ -255,7 +289,7 @@ export default function QuotationList() {
               </p>
               <div className="flex gap-3">
                 <button onClick={() => setAcceptConfirm(null)} className="flex-1 neu-raised neu-btn px-6 py-3 rounded-xl text-slate-600 hover:bg-slate-100">Cancel</button>
-                <button onClick={() => handleAcceptQuotation(acceptConfirm)} className="flex-1 neu-raised neu-btn px-6 py-3 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 flex items-center justify-center gap-2">
+                <button onClick={handleAcceptQuotation} className="flex-1 neu-raised neu-btn px-6 py-3 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 flex items-center justify-center gap-2">
                   <CheckCircle className="w-5 h-5" />Yes, Accept & Create Job
                 </button>
               </div>
