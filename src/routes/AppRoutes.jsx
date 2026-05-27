@@ -11,6 +11,7 @@ import HRRoutes from '../modules/hr/routes/HRRoutes'
 import PayrollRoutes from '../modules/payroll/routes/PayrollRoutes'
 import CRMRoutes from '../modules/crm/routes/CRMRoutes'
 import SalesRoutes from '../modules/sales/routes/SalesRoutes'
+import OperationsRoutes from '../modules/operations/routes/OperationsRoutes'
 import { USER_ROLES } from '../types/authTypes'
 
 export default function AppRoutes() {
@@ -81,6 +82,18 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute>
             <SalesRoutes />
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* ============================================ */}
+      {/* MODULE 6 - OPERATIONS & SCHEDULING           */}
+      {/* ============================================ */}
+      <Route 
+        path="/operations/*" 
+        element={
+          <ProtectedRoute>
+            <OperationsRoutes />
           </ProtectedRoute>
         } 
       />
