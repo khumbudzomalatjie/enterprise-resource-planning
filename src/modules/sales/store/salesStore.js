@@ -8,7 +8,6 @@ const useSalesStore = create((set, get) => ({
   selectedInvoice: null,
   payments: [],
   productsServices: [],
-  salesTargets: [],
   stats: {},
   loading: false,
   error: null,
@@ -54,6 +53,18 @@ const useSalesStore = create((set, get) => ({
       selectedQuotation: state.selectedQuotation?.id === id ? null : state.selectedQuotation
     }))
     return { success: true }
+  },
+
+  acceptQuotation: async (id) => {
+    const result = await salesApi.acceptQuotation(id)
+    if (result.error) return { success: false, error: result.error.message }
+    set(state => ({
+      quotations: state.quotations.filter(q => q.id !== id),
+      selectedQuotation: state.selectedQuotation?.id === id 
+        ? { ...state.selectedQuotation, status: 'accepted' } 
+        : state.selectedQuotation
+    }))
+    return { success: true, data: result.data }
   },
 
   fetchInvoices: async (filters = {}) => {
