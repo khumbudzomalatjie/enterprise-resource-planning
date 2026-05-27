@@ -28,7 +28,8 @@ import {
   Sun,
   Moon,
   UserPlus,
-  Shield
+  Shield,
+  ClipboardList
 } from 'lucide-react'
 
 export default function Dashboard() {
@@ -53,44 +54,37 @@ export default function Dashboard() {
     { 
       icon: Users, 
       label: 'Human Resources', 
-      description: 'Staff lifecycle, recruitment',
+      description: 'Staff lifecycle, recruitment, attendance',
       path: '/hr',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.HR_MANAGER, USER_ROLES.OPERATIONS_MANAGER]
     },
     { 
       icon: CreditCard, 
       label: 'Payroll', 
-      description: 'Salary, taxes, compliance',
+      description: 'Salary, taxes, compliance, payslips',
       path: '/payroll',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.FINANCE_OFFICER, USER_ROLES.HR_MANAGER]
     },
     { 
-      icon: Clock, 
-      label: 'Attendance', 
-      description: 'Clock in/out, timesheets, shifts',
-      path: '/hr/attendance',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.HR_MANAGER, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SUPERVISOR]
+      icon: ClipboardList, 
+      label: 'Operations & Jobs', 
+      description: 'Job management, scheduling, routes, teams',
+      path: '/operations',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SUPERVISOR]
     },
     { 
-      icon: Building2, 
+      icon: TrendingUp, 
       label: 'CRM & Clients', 
       description: 'Client management, pipeline, services',
       path: '/crm',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SALES_AGENT]
     },
     { 
-      icon: TrendingUp, 
+      icon: FileText, 
       label: 'Sales & Quotations', 
-      description: 'Quotations, invoices, A4 PDF',
+      description: 'Quotations, invoices, A4 PDF, payments',
       path: '/sales',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SALES_AGENT, USER_ROLES.FINANCE_OFFICER]
-    },
-    { 
-      icon: Briefcase, 
-      label: 'Operations', 
-      description: 'Job management, scheduling, routes',
-      path: '/operations',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SUPERVISOR]
     },
     { 
       icon: Truck, 
@@ -135,7 +129,7 @@ export default function Dashboard() {
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.CLEANER]
     },
     { 
-      icon: FileText, 
+      icon: BarChart3, 
       label: 'Reporting', 
       description: 'BI dashboards, export analytics',
       path: '/reports',
@@ -165,9 +159,9 @@ export default function Dashboard() {
       return
     }
     
-    const availableModules = ['/hr', '/payroll', '/hr/attendance', '/crm', '/sales', '/operations', '/dashboard', '/users']
+    const builtModules = ['/hr', '/payroll', '/crm', '/sales', '/operations', '/dashboard', '/users']
     
-    if (availableModules.includes(module.path)) {
+    if (builtModules.includes(module.path)) {
       navigate(module.path)
     } else {
       toast.success(`${module.label} module coming soon!`, {
@@ -182,7 +176,7 @@ export default function Dashboard() {
   }
 
   const isModuleBuilt = (module) => {
-    const builtModules = ['/hr', '/payroll', '/hr/attendance', '/crm', '/sales', '/operations']
+    const builtModules = ['/hr', '/payroll', '/crm', '/sales', '/operations']
     return builtModules.includes(module.path)
   }
 
@@ -320,7 +314,7 @@ export default function Dashboard() {
 
         {/* Tab Panels */}
         <AnimatePresence mode="wait">
-          {/* JOB PANEL - Linked to Operations */}
+          {/* JOB PANEL */}
           {activeTab === 'job' && (
             <motion.section
               key="job"
@@ -341,6 +335,12 @@ export default function Dashboard() {
                     <div className="h-2 w-2/3 bg-emerald-500 rounded-full"></div>
                   </div>
                   <p className="text-xs mt-2 text-slate-500 dark:text-slate-400">67% completion rate</p>
+                  <button 
+                    onClick={() => navigate('/operations')}
+                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
+                  >
+                    View Jobs
+                  </button>
                 </div>
 
                 <div className="neu-raised p-6 rounded-3xl stat-card">
@@ -351,7 +351,7 @@ export default function Dashboard() {
                   <p className="text-3xl font-bold mt-2 text-slate-800 dark:text-white">12</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Residential · Commercial · Industrial</p>
                   <button 
-                    onClick={() => navigate('/operations')}
+                    onClick={() => navigate('/operations/jobs')}
                     className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
                   >
                     Manage Jobs
@@ -377,6 +377,12 @@ export default function Dashboard() {
                       <span className="text-slate-500 dark:text-slate-400">Jun 15</span>
                     </li>
                   </ul>
+                  <button 
+                    onClick={() => navigate('/operations/calendar')}
+                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
+                  >
+                    View Schedule
+                  </button>
                 </div>
               </div>
             </motion.section>
@@ -400,7 +406,7 @@ export default function Dashboard() {
                     onClick={() => navigate('/sales')}
                     className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
                   >
-                    Sales Dashboard
+                    Sales Report
                   </button>
                 </div>
 
@@ -497,6 +503,12 @@ export default function Dashboard() {
                     <div className="h-2 w-3/4 bg-emerald-500 rounded-full"></div>
                   </div>
                   <p className="text-xs mt-2 text-slate-500 dark:text-slate-400">75% attendance this week</p>
+                  <button 
+                    onClick={() => navigate('/hr')}
+                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
+                  >
+                    HR Dashboard
+                  </button>
                 </div>
 
                 <div className="neu-raised p-6 rounded-3xl stat-card">
@@ -533,6 +545,12 @@ export default function Dashboard() {
                       <span className="text-slate-500 dark:text-slate-400">35 hrs</span>
                     </li>
                   </ul>
+                  <button 
+                    onClick={() => navigate('/hr/attendance')}
+                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
+                  >
+                    View Attendance
+                  </button>
                 </div>
               </div>
             </motion.section>
@@ -542,6 +560,3 @@ export default function Dashboard() {
     </div>
   )
 }
-
-// Missing import
-import { Building2 } from 'lucide-react'
