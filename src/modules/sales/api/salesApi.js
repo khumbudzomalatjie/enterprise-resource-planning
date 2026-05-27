@@ -26,32 +26,61 @@ export const salesApi = {
   },
 
   async createQuotation(quotationData, items) {
-    // Insert quotation
+    // Generate quotation number
+    const yearSuffix = new Date().getFullYear().toString().slice(-2)
+    const { count, error: countError } = await supabase
+      .from('quotations')
+      .select('*', { count: 'exact', head: true })
+      .like('quotation_number', `Q-${yearSuffix}-%`)
+    
+    const nextNum = String((count || 0) + 1).padStart(4, '0')
+    const quotationNumber = `Q-${yearSuffix}-${nextNum}`
+    
+    // Insert quotation with auto-generated number
     const { data: quotation, error: qError } = await supabase
       .from('quotations')
-      .insert([quotationData])
+      .insert([{ 
+        ...quotationData, 
+        quotation_number: quotationNumber,
+        client_id: quotationData.client_id || null
+      }])
       .select()
       .single()
 
-    if (qError) return { error: qError }
+    if (qError) {
+      console.error('Quotation insert error:', qError)
+      return { error: qError }
+    }
 
-    // Insert items
+    // Insert items WITHOUT total_price (it's a generated column)
     if (items && items.length > 0) {
-      const itemsWithQuotationId = items.map((item, index) => ({
-        ...item,
+      const itemsToInsert = items.map((item, index) => ({
         quotation_id: quotation.id,
-        item_number: index + 1
+        item_number: index + 1,
+        description: item.description,
+        quantity: item.quantity || 1,
+        unit: item.unit || 'each',
+        unit_price: item.unit_price || 0,
+        discount_percent: item.discount_percent || 0,
+        tax_percent: item.tax_percent || 15
+        // DO NOT include total_price - it's auto-generated
       }))
 
       const { error: iError } = await supabase
         .from('quotation_items')
-        .insert(itemsWithQuotationId)
+        .insert(itemsToInsert)
 
-      if (iError) return { error: iError }
+      if (iError) {
+        console.error('Items insert error:', iError)
+        // Delete the quotation if items fail
+        await supabase.from('quotations').delete().eq('id', quotation.id)
+        return { error: iError }
+      }
     }
 
     // Fetch complete quotation with items
-    return await salesApi.getQuotation(quotation.id)
+    const result = await this.getQuotation(quotation.id)
+    return result
   },
 
   async updateQuotation(id, updates) {
@@ -87,7 +116,17 @@ export const salesApi = {
   async addQuotationItem(itemData) {
     const { data, error } = await supabase
       .from('quotation_items')
-      .insert([itemData])
+      .insert([{
+        quotation_id: itemData.quotation_id,
+        item_number: itemData.item_number,
+        description: itemData.description,
+        quantity: itemData.quantity || 1,
+        unit: itemData.unit || 'each',
+        unit_price: itemData.unit_price || 0,
+        discount_percent: itemData.discount_percent || 0,
+        tax_percent: itemData.tax_percent || 15
+        // total_price is generated
+      }])
       .select()
       .single()
     return { data, error }
@@ -96,7 +135,15 @@ export const salesApi = {
   async updateQuotationItem(id, updates) {
     const { data, error } = await supabase
       .from('quotation_items')
-      .update(updates)
+      .update({
+        description: updates.description,
+        quantity: updates.quantity,
+        unit: updates.unit,
+        unit_price: updates.unit_price,
+        discount_percent: updates.discount_percent,
+        tax_percent: updates.tax_percent
+        // total_price is generated
+      })
       .eq('id', id)
       .select()
       .single()
@@ -145,24 +192,28 @@ export const salesApi = {
     if (iError) return { error: iError }
 
     if (items && items.length > 0) {
-      const itemsWithInvoiceId = items.map((item, index) => ({
-        ...item,
+      const itemsToInsert = items.map((item, index) => ({
         invoice_id: invoice.id,
-        item_number: index + 1
+        item_number: index + 1,
+        description: item.description,
+        quantity: item.quantity || 1,
+        unit: item.unit || 'each',
+        unit_price: item.unit_price || 0,
+        discount_percent: item.discount_percent || 0,
+        tax_percent: item.tax_percent || 15
+        // total_price is generated
       }))
 
-      await supabase.from('invoice_items').insert(itemsWithInvoiceId)
+      await supabase.from('invoice_items').insert(itemsToInsert)
     }
 
-    return await salesApi.getInvoice(invoice.id)
+    return await this.getInvoice(invoice.id)
   },
 
   async convertQuotationToInvoice(quotationId) {
-    // Get quotation with items
-    const { data: quotation } = await salesApi.getQuotation(quotationId)
+    const { data: quotation } = await this.getQuotation(quotationId)
     if (!quotation) return { error: 'Quotation not found' }
 
-    // Create invoice from quotation
     const invoiceData = {
       quotation_id: quotation.id,
       client_id: quotation.client_id,
@@ -187,11 +238,10 @@ export const salesApi = {
       tax_percent: item.tax_percent
     }))
 
-    const result = await salesApi.createInvoice(invoiceData, items)
+    const result = await this.createInvoice(invoiceData, items)
     
     if (!result.error) {
-      // Update quotation status
-      await salesApi.updateQuotationStatus(quotationId, 'converted')
+      await this.updateQuotationStatus(quotationId, 'converted')
     }
 
     return result
@@ -218,10 +268,9 @@ export const salesApi = {
       .single()
 
     if (!error && paymentData.invoice_id) {
-      // Update invoice amount paid
-      const { data: invoice } = await salesApi.getInvoice(paymentData.invoice_id)
+      const { data: invoice } = await this.getInvoice(paymentData.invoice_id)
       if (invoice) {
-        const totalPaid = (invoice.payments || []).reduce((sum, p) => sum + p.amount, 0) + paymentData.amount
+        const totalPaid = (invoice.payments || []).reduce((sum, p) => sum + (p.amount || 0), 0) + (paymentData.amount || 0)
         const newStatus = totalPaid >= invoice.total_amount ? 'paid' : 'partially_paid'
         
         await supabase
