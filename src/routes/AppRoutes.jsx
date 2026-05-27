@@ -8,6 +8,7 @@ import Dashboard from '../pages/Dashboard'
 import UserManagement from '../pages/UserManagement'
 import Unauthorized from '../pages/Unauthorized'
 import HRRoutes from '../modules/hr/routes/HRRoutes'
+import PayrollRoutes from '../modules/payroll/routes/PayrollRoutes'
 import { USER_ROLES } from '../types/authTypes'
 
 export default function AppRoutes() {
@@ -28,8 +29,9 @@ export default function AppRoutes() {
         }
       />
       
-      {/* HR Module Routes */}
+      {/* Module Routes */}
       <Route path="/hr/*" element={<HRRoutes />} />
+      <Route path="/payroll/*" element={<PayrollRoutes />} />
       
       {/* Admin Routes */}
       <Route
