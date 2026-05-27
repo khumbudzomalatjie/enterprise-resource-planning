@@ -7,30 +7,10 @@ import Navbar from '../components/Navbar'
 import { USER_ROLES } from '../types/authTypes'
 import toast from 'react-hot-toast'
 import { 
-  Users, 
-  Briefcase, 
-  TrendingUp, 
-  CreditCard, 
-  Package, 
-  ShoppingCart, 
-  Landmark, 
-  Database,
-  Smartphone,
-  FileText,
-  Calendar,
-  FolderOpen,
-  Truck,
-  Clock,
-  DollarSign,
-  BarChart3,
-  CheckCircle2,
-  Sparkles,
-  Sun,
-  Moon,
-  UserPlus,
-  Shield,
-  Building2,
-  Phone
+  Users, Briefcase, TrendingUp, CreditCard, Package, 
+  ShoppingCart, Landmark, Database, Smartphone, FileText,
+  Calendar, FolderOpen, Truck, Clock, DollarSign, BarChart3,
+  CheckCircle2, Sparkles, Sun, Moon, Shield, Building2
 } from 'lucide-react'
 
 export default function Dashboard() {
@@ -38,7 +18,6 @@ export default function Dashboard() {
   const { isDark, toggleTheme } = useThemeStore()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('job')
-  const [logoError, setLogoError] = useState(false)
 
   const userName = profile?.full_name || user?.email?.split('@')[0] || 'User'
   const userRole = profile?.role
@@ -51,105 +30,126 @@ export default function Dashboard() {
   ]
 
   // Module definitions with routes and required roles
-  // Attendance is now under HR, not a separate module on main dashboard
   const modules = [
     { 
       icon: Users, 
       label: 'Human Resources', 
-      description: 'Staff lifecycle, recruitment, attendance, leave',
+      description: 'Staff lifecycle, recruitment, attendance',
       path: '/hr',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.HR_MANAGER, USER_ROLES.OPERATIONS_MANAGER]
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.HR_MANAGER, USER_ROLES.OPERATIONS_MANAGER],
+      built: true
     },
     { 
       icon: CreditCard, 
       label: 'Payroll', 
       description: 'Salary, taxes, compliance, payslips',
       path: '/payroll',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.FINANCE_OFFICER, USER_ROLES.HR_MANAGER]
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.FINANCE_OFFICER, USER_ROLES.HR_MANAGER],
+      built: true
+    },
+    { 
+      icon: Clock, 
+      label: 'Attendance', 
+      description: 'Time tracking, shifts, check-ins',
+      path: '/hr/attendance',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.HR_MANAGER, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SUPERVISOR],
+      built: true
     },
     { 
       icon: Building2, 
       label: 'CRM & Clients', 
       description: 'Client management, pipeline, services',
       path: '/crm',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SALES_AGENT]
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SALES_AGENT],
+      built: true
+    },
+    { 
+      icon: TrendingUp, 
+      label: 'Sales & Quotations', 
+      description: 'Quotations, invoices, payments, A4 PDF',
+      path: '/sales',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SALES_AGENT, USER_ROLES.FINANCE_OFFICER],
+      built: true
     },
     { 
       icon: Truck, 
       label: 'Fleet Management', 
       description: 'Vehicle tracking, maintenance, fuel',
       path: '/fleet',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER]
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER],
+      built: false
     },
     { 
       icon: Package, 
       label: 'Inventory', 
       description: 'Stock, supplies, warehouses',
       path: '/inventory',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER]
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER],
+      built: false
     },
     { 
       icon: ShoppingCart, 
       label: 'Procurement', 
       description: 'Purchase orders, vendors, approvals',
       path: '/procurement',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.FINANCE_OFFICER]
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.FINANCE_OFFICER],
+      built: false
     },
     { 
       icon: Landmark, 
       label: 'Finance', 
-      description: 'Accounting, ledgers, budget, invoices',
+      description: 'Accounting, ledgers, budget, reports',
       path: '/finance',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.FINANCE_OFFICER]
-    },
-    { 
-      icon: TrendingUp, 
-      label: 'Sales', 
-      description: 'Orders, quotations, invoicing',
-      path: '/sales',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.SALES_AGENT]
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.FINANCE_OFFICER],
+      built: false
     },
     { 
       icon: Database, 
       label: 'Assets', 
       description: 'Depreciation, asset register, tracking',
       path: '/assets',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.FINANCE_OFFICER]
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.FINANCE_OFFICER],
+      built: false
     },
     { 
       icon: Briefcase, 
       label: 'Jobs', 
       description: 'Work orders, task scheduling, dispatch',
       path: '/jobs',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SUPERVISOR]
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SUPERVISOR],
+      built: false
     },
     { 
       icon: Smartphone, 
       label: 'Mobile Cleaner', 
       description: 'Field app, route updates, checklists',
       path: '/mobile',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.CLEANER]
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.CLEANER],
+      built: false
     },
     { 
       icon: FileText, 
       label: 'Reporting', 
-      description: 'BI dashboards, analytics, export',
+      description: 'BI dashboards, analytics, export data',
       path: '/reports',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.FINANCE_OFFICER, USER_ROLES.HR_MANAGER]
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.FINANCE_OFFICER, USER_ROLES.HR_MANAGER],
+      built: false
     },
     { 
       icon: Calendar, 
       label: 'Events', 
-      description: 'Scheduling, logistics, tasks, venues',
+      description: 'Scheduling, logistics, task management',
       path: '/events',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER]
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER],
+      built: false
     },
     { 
       icon: FolderOpen, 
       label: 'Documents', 
       description: 'DMS, contracts, cloud storage',
       path: '/documents',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.HR_MANAGER]
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.HR_MANAGER],
+      built: false
     },
   ]
 
@@ -158,42 +158,30 @@ export default function Dashboard() {
     const hasAccess = module.roles.includes(userRole) || userRole === USER_ROLES.SUPER_ADMIN
     
     if (!hasAccess) {
-      toast.error(`You don't have access to ${module.label}. Required role not assigned.`)
+      toast.error(`You don't have access to ${module.label}`)
       return
     }
     
-    // Check if module route exists (built modules)
-    const availableModules = ['/hr', '/payroll', '/crm', '/dashboard', '/users']
-    
-    if (availableModules.includes(module.path)) {
+    if (module.built) {
       navigate(module.path)
     } else {
-      toast.success(`${module.label} module coming soon! 🚧`, {
+      toast.success(`${module.label} module coming soon!`, {
         icon: '🚧',
         duration: 3000,
       })
     }
   }
 
-  // Check if module is accessible by user's role
   const isModuleAccessible = (module) => {
     return module.roles.includes(userRole) || userRole === USER_ROLES.SUPER_ADMIN
   }
 
-  // Check if module is built and deployed
-  const isModuleBuilt = (module) => {
-    const builtModules = ['/hr', '/payroll', '/crm']
-    return builtModules.includes(module.path)
-  }
-
   return (
     <div className={`min-h-screen font-['Inter'] transition-colors duration-300 ${isDark ? 'dark' : ''}`}>
-      {/* Skip to main content */}
       <a href="#main-dashboard" className="skip-link">Skip to main content</a>
-
       <Navbar />
 
-      {/* Theme Toggle + ERP Label - Fixed position */}
+      {/* Theme Toggle + ERP Label */}
       <div className="fixed top-20 right-4 z-30 flex items-center gap-4">
         <div className="neu-inset px-5 py-2 rounded-full flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -206,11 +194,7 @@ export default function Dashboard() {
           className="neu-raised neu-btn w-12 h-12 rounded-2xl flex items-center justify-center hover:scale-110 transition-transform"
           title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
         >
-          {isDark ? (
-            <Sun className="w-6 h-6 text-amber-400" />
-          ) : (
-            <Moon className="w-6 h-6 text-slate-600" />
-          )}
+          {isDark ? <Sun className="w-6 h-6 text-amber-400" /> : <Moon className="w-6 h-6 text-slate-600" />}
         </button>
       </div>
 
@@ -229,7 +213,6 @@ export default function Dashboard() {
       </header>
 
       <main id="main-dashboard" className="max-w-7xl mx-auto px-4 pb-16">
-        {/* Space between header and tabs */}
         <div className="h-24 md:h-36"></div>
 
         {/* Tab Navigation */}
@@ -267,7 +250,6 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {modules.map((module, index) => {
               const accessible = isModuleAccessible(module)
-              const built = isModuleBuilt(module)
               
               return (
                 <motion.div
@@ -278,46 +260,36 @@ export default function Dashboard() {
                   onClick={() => handleModuleClick(module)}
                   className={`
                     neu-raised rounded-2xl p-5 transition-all flex items-start gap-3 cursor-pointer
-                    ${accessible && built 
-                      ? 'hover:scale-[1.02] hover:shadow-lg ring-1 ring-emerald-500/30' 
-                      : accessible && !built
+                    ${accessible && module.built 
+                      ? 'hover:scale-[1.02] hover:shadow-lg' 
+                      : accessible && !module.built
                       ? 'hover:scale-[1.02] opacity-75'
                       : 'opacity-40 cursor-not-allowed'
                     }
                   `}
-                  title={!accessible 
-                    ? 'You do not have access to this module' 
-                    : !built 
-                    ? 'Coming soon! This module is under development.'
-                    : `Go to ${module.label}`
-                  }
+                  title={!accessible ? 'You do not have access to this module' : !module.built ? 'Coming soon!' : `Go to ${module.label}`}
                 >
                   <module.icon className={`w-8 h-8 flex-shrink-0 ${
                     accessible ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'
                   }`} />
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h3 className={`font-bold text-lg truncate ${
+                      <h3 className={`font-bold text-lg ${
                         accessible ? 'text-slate-800 dark:text-white' : 'text-slate-400'
                       }`}>
                         {module.label}
                       </h3>
-                      {built && accessible && (
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" title="Available"></span>
+                      {module.built && accessible && (
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Available"></span>
                       )}
                       {!accessible && (
-                        <Shield className="w-4 h-4 text-slate-400 flex-shrink-0" title="Restricted access" />
+                        <Shield className="w-4 h-4 text-slate-400" title="Restricted access" />
                       )}
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{module.description}</p>
-                    {!built && accessible && (
+                    {!module.built && accessible && (
                       <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                         Coming Soon
-                      </span>
-                    )}
-                    {!accessible && (
-                      <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                        Restricted
                       </span>
                     )}
                   </div>
@@ -329,20 +301,12 @@ export default function Dashboard() {
 
         {/* Tab Panels */}
         <AnimatePresence mode="wait">
-          {/* JOB PANEL */}
           {activeTab === 'job' && (
-            <motion.section
-              key="job"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
+            <motion.section key="job" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="neu-raised p-6 rounded-3xl stat-card">
                   <h2 className="text-xl font-semibold flex gap-2 items-center text-slate-800 dark:text-white">
-                    <Briefcase className="w-6 h-6 text-emerald-600" />
-                    Active Jobs
+                    <Briefcase className="w-6 h-6 text-emerald-600" />Active Jobs
                   </h2>
                   <p className="text-3xl font-bold mt-3 text-slate-800 dark:text-white">24</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Open work orders</p>
@@ -351,203 +315,97 @@ export default function Dashboard() {
                   </div>
                   <p className="text-xs mt-2 text-slate-500 dark:text-slate-400">67% completion rate</p>
                 </div>
-
                 <div className="neu-raised p-6 rounded-3xl stat-card">
                   <h2 className="text-xl font-semibold flex gap-2 text-slate-800 dark:text-white">
-                    <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-                    Job Categories
+                    <CheckCircle2 className="w-6 h-6 text-emerald-600" />Job Categories
                   </h2>
                   <p className="text-3xl font-bold mt-2 text-slate-800 dark:text-white">12</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Residential · Commercial · Industrial</p>
-                  <button 
-                    onClick={() => toast.success('Jobs module coming soon!')}
-                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors"
-                  >
-                    View Details
-                  </button>
+                  <button className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm">View Details</button>
                 </div>
-
                 <div className="neu-raised p-6 rounded-3xl stat-card">
                   <h2 className="text-xl font-semibold flex gap-2 text-slate-800 dark:text-white">
-                    <Calendar className="w-6 h-6 text-emerald-600" />
-                    Scheduled Jobs
+                    <Calendar className="w-6 h-6 text-emerald-600" />Scheduled Jobs
                   </h2>
                   <ul className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                    <li className="flex justify-between">
-                      <span>Office Clean - Main St</span>
-                      <span className="text-emerald-600 dark:text-emerald-400">Today</span>
-                    </li>
-                    <li className="flex justify-between">
-                      <span>Parking Lot Sweep</span>
-                      <span className="text-emerald-600 dark:text-emerald-400">Tomorrow</span>
-                    </li>
-                    <li className="flex justify-between">
-                      <span>Window Washing - Tower B</span>
-                      <span className="text-slate-500 dark:text-slate-400">Jun 15</span>
-                    </li>
+                    <li className="flex justify-between"><span>Office Clean - Main St</span><span className="text-emerald-600">Today</span></li>
+                    <li className="flex justify-between"><span>Parking Lot Sweep</span><span className="text-emerald-600">Tomorrow</span></li>
+                    <li className="flex justify-between"><span>Window Washing - Tower B</span><span className="text-slate-500">Jun 15</span></li>
                   </ul>
                 </div>
               </div>
             </motion.section>
           )}
 
-          {/* SALES PANEL */}
           {activeTab === 'sales' && (
-            <motion.section
-              key="sales"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
+            <motion.section key="sales" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="neu-raised p-6 rounded-3xl stat-card">
                   <TrendingUp className="w-8 h-8 text-emerald-600 mb-2" />
                   <p className="text-2xl font-bold mt-2 text-slate-800 dark:text-white">$189,450</p>
                   <p className="text-slate-500 dark:text-slate-400">Total Sales (YTD)</p>
-                  <button className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md opacity-80 cursor-default">
-                    Sales Report
-                  </button>
+                  <button onClick={() => navigate('/sales')} className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm hover:bg-emerald-600 transition-colors cursor-pointer">Sales Dashboard</button>
                 </div>
-
                 <div className="neu-raised p-6 rounded-3xl stat-card">
                   <Users className="w-8 h-8 text-emerald-600 mb-2" />
                   <p className="text-2xl font-bold mt-2 text-slate-800 dark:text-white">47</p>
                   <p className="text-slate-500 dark:text-slate-400">Active Clients</p>
-                  <button 
-                    onClick={() => navigate('/crm')}
-                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
-                  >
-                    Open CRM
-                  </button>
+                  <button onClick={() => navigate('/crm')} className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm hover:bg-emerald-600 transition-colors cursor-pointer">CRM</button>
                 </div>
-
                 <div className="neu-raised p-6 rounded-3xl stat-card">
                   <DollarSign className="w-8 h-8 text-emerald-600 mb-2" />
                   <p className="text-2xl font-bold mt-2 text-slate-800 dark:text-white">$32,800</p>
                   <p className="text-slate-500 dark:text-slate-400">Pending Invoices</p>
-                  <button className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md opacity-80 cursor-default">
-                    Follow Up
-                  </button>
+                  <button onClick={() => navigate('/sales')} className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm hover:bg-emerald-600 transition-colors cursor-pointer">View Invoices</button>
                 </div>
               </div>
             </motion.section>
           )}
 
-          {/* EVENTS PANEL */}
           {activeTab === 'events' && (
-            <motion.section
-              key="events"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
+            <motion.section key="events" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="neu-raised p-6 rounded-3xl">
-                  <h2 className="text-xl flex gap-2 items-center text-slate-800 dark:text-white">
-                    <Calendar className="w-6 h-6 text-emerald-600" />
-                    Upcoming Events
-                  </h2>
+                  <h2 className="text-xl flex gap-2 items-center text-slate-800 dark:text-white"><Calendar className="w-6 h-6 text-emerald-600" />Upcoming Events</h2>
                   <div className="mt-3 space-y-2 text-slate-600 dark:text-slate-300">
-                    <p>🎉 Annual Gala · Dec 15</p>
-                    <p>🏆 Team Building · Jan 10</p>
-                    <p>📢 Expo 2025 · Feb 5</p>
+                    <p>🎉 Annual Gala · Dec 15</p><p>🏆 Team Building · Jan 10</p><p>📢 Expo 2025 · Feb 5</p>
                   </div>
-                  <button className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white opacity-80 cursor-default">
-                    Manage Events
-                  </button>
+                  <button className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white">Manage Events</button>
                 </div>
-
                 <div className="neu-raised p-6 rounded-3xl">
-                  <h2 className="text-xl flex gap-2 text-slate-800 dark:text-white">
-                    <Database className="w-6 h-6 text-emerald-600" />
-                    Event Logistics
-                  </h2>
-                  <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-                    3 venues booked | 12 vendors confirmed
-                  </p>
-                  <div className="mt-4 h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full">
-                    <div className="h-2 w-4/5 bg-emerald-500 rounded-full"></div>
-                  </div>
-                  <p className="text-xs mt-2 text-slate-500 dark:text-slate-400">80% preparation complete</p>
-                  <button className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white opacity-80 cursor-default">
-                    Logistics Dashboard
-                  </button>
+                  <h2 className="text-xl flex gap-2 text-slate-800 dark:text-white"><Database className="w-6 h-6 text-emerald-600" />Event Logistics</h2>
+                  <p className="mt-3 text-sm text-slate-500">3 venues booked | 12 vendors confirmed</p>
+                  <div className="mt-4 h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full"><div className="h-2 w-4/5 bg-emerald-500 rounded-full"></div></div>
+                  <p className="text-xs mt-2">80% preparation complete</p>
+                  <button className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white">Logistics Dashboard</button>
                 </div>
               </div>
             </motion.section>
           )}
 
-          {/* HUMAN RESOURCES PANEL */}
           {activeTab === 'hr' && (
-            <motion.section
-              key="hr"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
+            <motion.section key="hr" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="neu-raised p-6 rounded-3xl stat-card">
-                  <h2 className="text-xl font-semibold flex gap-2 items-center text-slate-800 dark:text-white">
-                    <Users className="w-6 h-6 text-emerald-600" />
-                    Staff Overview
-                  </h2>
+                  <h2 className="text-xl font-semibold flex gap-2 items-center text-slate-800 dark:text-white"><Users className="w-6 h-6 text-emerald-600" />Staff Overview</h2>
                   <p className="text-3xl font-bold mt-3 text-slate-800 dark:text-white">28</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Active cleaners + 7 admins</p>
-                  <div className="mt-4 h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full">
-                    <div className="h-2 w-3/4 bg-emerald-500 rounded-full"></div>
-                  </div>
-                  <p className="text-xs mt-2 text-slate-500 dark:text-slate-400">75% attendance this week</p>
-                  <button 
-                    onClick={() => navigate('/hr')}
-                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
-                  >
-                    Manage HR
-                  </button>
+                  <p className="text-sm text-slate-500">Active cleaners + 7 admins</p>
+                  <div className="mt-4 h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full"><div className="h-2 w-3/4 bg-emerald-500 rounded-full"></div></div>
+                  <p className="text-xs mt-2">75% attendance this week</p>
                 </div>
-
                 <div className="neu-raised p-6 rounded-3xl stat-card">
-                  <h2 className="text-xl font-semibold flex gap-2 text-slate-800 dark:text-white">
-                    <CreditCard className="w-6 h-6 text-emerald-600" />
-                    Payroll Summary
-                  </h2>
+                  <h2 className="text-xl font-semibold flex gap-2 text-slate-800 dark:text-white"><CreditCard className="w-6 h-6 text-emerald-600" />Payroll Summary</h2>
                   <p className="text-3xl font-bold mt-2 text-slate-800 dark:text-white">$47,280</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Monthly payroll</p>
-                  <button 
-                    onClick={() => navigate('/payroll')}
-                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
-                  >
-                    Process Payroll
-                  </button>
+                  <p className="text-sm text-slate-500">Monthly payroll</p>
+                  <button onClick={() => navigate('/payroll')} className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm hover:bg-emerald-600 transition-colors cursor-pointer">Process Payroll</button>
                 </div>
-
                 <div className="neu-raised p-6 rounded-3xl stat-card">
-                  <h2 className="text-xl font-semibold flex gap-2 text-slate-800 dark:text-white">
-                    <Clock className="w-6 h-6 text-emerald-600" />
-                    Attendance Tracking
-                  </h2>
+                  <h2 className="text-xl font-semibold flex gap-2 text-slate-800 dark:text-white"><Clock className="w-6 h-6 text-emerald-600" />Time Tracking</h2>
                   <ul className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                    <li className="flex justify-between">
-                      <span>Present Today</span>
-                      <span className="text-emerald-600 dark:text-emerald-400">22/28</span>
-                    </li>
-                    <li className="flex justify-between">
-                      <span>Absent</span>
-                      <span className="text-red-500">4</span>
-                    </li>
-                    <li className="flex justify-between">
-                      <span>On Leave</span>
-                      <span className="text-amber-500">2</span>
-                    </li>
+                    <li className="flex justify-between"><span>Sarah K.</span><span className="text-emerald-600">42 hrs</span></li>
+                    <li className="flex justify-between"><span>Miguel R.</span><span className="text-emerald-600">38 hrs</span></li>
+                    <li className="flex justify-between"><span>Lisa M.</span><span className="text-slate-500">35 hrs</span></li>
                   </ul>
-                  <button 
-                    onClick={() => navigate('/hr/attendance')}
-                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
-                  >
-                    View Attendance
-                  </button>
                 </div>
               </div>
             </motion.section>
