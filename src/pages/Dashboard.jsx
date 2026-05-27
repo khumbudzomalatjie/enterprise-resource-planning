@@ -28,7 +28,9 @@ import {
   Sun,
   Moon,
   UserPlus,
-  Shield
+  Shield,
+  Building2,
+  Phone
 } from 'lucide-react'
 
 export default function Dashboard() {
@@ -53,21 +55,35 @@ export default function Dashboard() {
     { 
       icon: Users, 
       label: 'Human Resources', 
-      description: 'Staff lifecycle, recruitment',
+      description: 'Staff lifecycle, recruitment, attendance',
       path: '/hr',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.HR_MANAGER, USER_ROLES.OPERATIONS_MANAGER]
     },
     { 
       icon: CreditCard, 
       label: 'Payroll', 
-      description: 'Salary, taxes, compliance',
+      description: 'Salary, taxes, compliance, payslips',
       path: '/payroll',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.FINANCE_OFFICER, USER_ROLES.HR_MANAGER]
     },
     { 
+      icon: Clock, 
+      label: 'Attendance', 
+      description: 'Clock in/out, QR codes, GPS tracking',
+      path: '/hr/attendance',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.HR_MANAGER, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SUPERVISOR, USER_ROLES.CLEANER]
+    },
+    { 
+      icon: Building2, 
+      label: 'CRM & Clients', 
+      description: 'Client management, pipeline, services',
+      path: '/crm',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SALES_AGENT]
+    },
+    { 
       icon: Truck, 
       label: 'Fleet Management', 
-      description: 'Vehicle tracking, maintenance',
+      description: 'Vehicle tracking, maintenance, fuel',
       path: '/fleet',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER]
     },
@@ -81,56 +97,56 @@ export default function Dashboard() {
     { 
       icon: ShoppingCart, 
       label: 'Procurement', 
-      description: 'Purchase orders, vendors',
+      description: 'Purchase orders, vendors, approvals',
       path: '/procurement',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.FINANCE_OFFICER]
     },
     { 
       icon: Landmark, 
       label: 'Finance', 
-      description: 'Accounting, ledgers, budget',
+      description: 'Accounting, ledgers, budget, invoices',
       path: '/finance',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.FINANCE_OFFICER]
     },
     { 
       icon: TrendingUp, 
       label: 'Sales', 
-      description: 'Orders, CRM, invoicing',
+      description: 'Orders, quotations, invoicing',
       path: '/sales',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.SALES_AGENT]
     },
     { 
       icon: Database, 
       label: 'Assets', 
-      description: 'Depreciation, asset register',
+      description: 'Depreciation, asset register, tracking',
       path: '/assets',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.FINANCE_OFFICER]
     },
     { 
       icon: Briefcase, 
       label: 'Jobs', 
-      description: 'Work orders, task scheduling',
+      description: 'Work orders, task scheduling, dispatch',
       path: '/jobs',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SUPERVISOR]
     },
     { 
       icon: Smartphone, 
       label: 'Mobile Cleaner', 
-      description: 'Field app, route updates',
+      description: 'Field app, route updates, checklists',
       path: '/mobile',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.CLEANER]
     },
     { 
       icon: FileText, 
       label: 'Reporting', 
-      description: 'BI dashboards, export analytics',
+      description: 'BI dashboards, analytics, export',
       path: '/reports',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.FINANCE_OFFICER, USER_ROLES.HR_MANAGER]
     },
     { 
       icon: Calendar, 
       label: 'Events', 
-      description: 'Scheduling, logistics, tasks',
+      description: 'Scheduling, logistics, tasks, venues',
       path: '/events',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER]
     },
@@ -148,31 +164,31 @@ export default function Dashboard() {
     const hasAccess = module.roles.includes(userRole) || userRole === USER_ROLES.SUPER_ADMIN
     
     if (!hasAccess) {
-      toast.error(`You don't have access to ${module.label}`)
+      toast.error(`You don't have access to ${module.label}. Required role not assigned.`)
       return
     }
     
-    // Check if module route exists (only HR and Payroll are built so far)
-    const availableModules = ['/hr', '/payroll', '/dashboard', '/users']
+    // Check if module route exists (built modules)
+    const availableModules = ['/hr', '/hr/attendance', '/payroll', '/crm', '/dashboard', '/users']
     
     if (availableModules.includes(module.path)) {
       navigate(module.path)
     } else {
-      toast.success(`${module.label} module coming soon!`, {
+      toast.success(`${module.label} module coming soon! 🚧`, {
         icon: '🚧',
         duration: 3000,
       })
     }
   }
 
-  // Check if module is accessible
+  // Check if module is accessible by user's role
   const isModuleAccessible = (module) => {
     return module.roles.includes(userRole) || userRole === USER_ROLES.SUPER_ADMIN
   }
 
-  // Check if module is built
+  // Check if module is built and deployed
   const isModuleBuilt = (module) => {
-    const builtModules = ['/hr', '/payroll']
+    const builtModules = ['/hr', '/hr/attendance', '/payroll', '/crm']
     return builtModules.includes(module.path)
   }
 
@@ -269,7 +285,7 @@ export default function Dashboard() {
                   className={`
                     neu-raised rounded-2xl p-5 transition-all flex items-start gap-3 cursor-pointer
                     ${accessible && built 
-                      ? 'hover:scale-[1.02] hover:shadow-lg' 
+                      ? 'hover:scale-[1.02] hover:shadow-lg ring-1 ring-emerald-500/30' 
                       : accessible && !built
                       ? 'hover:scale-[1.02] opacity-75'
                       : 'opacity-40 cursor-not-allowed'
@@ -278,31 +294,36 @@ export default function Dashboard() {
                   title={!accessible 
                     ? 'You do not have access to this module' 
                     : !built 
-                    ? 'Coming soon!'
+                    ? 'Coming soon! This module is under development.'
                     : `Go to ${module.label}`
                   }
                 >
                   <module.icon className={`w-8 h-8 flex-shrink-0 ${
                     accessible ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'
                   }`} />
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className={`font-bold text-lg ${
+                      <h3 className={`font-bold text-lg truncate ${
                         accessible ? 'text-slate-800 dark:text-white' : 'text-slate-400'
                       }`}>
                         {module.label}
                       </h3>
                       {built && accessible && (
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Available"></span>
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" title="Available"></span>
                       )}
                       {!accessible && (
-                        <Shield className="w-4 h-4 text-slate-400" title="Restricted access" />
+                        <Shield className="w-4 h-4 text-slate-400 flex-shrink-0" title="Restricted access" />
                       )}
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{module.description}</p>
                     {!built && accessible && (
                       <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                         Coming Soon
+                      </span>
+                    )}
+                    {!accessible && (
+                      <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                        Restricted
                       </span>
                     )}
                   </div>
@@ -344,7 +365,10 @@ export default function Dashboard() {
                   </h2>
                   <p className="text-3xl font-bold mt-2 text-slate-800 dark:text-white">12</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Residential · Commercial · Industrial</p>
-                  <button className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md opacity-80 cursor-default">
+                  <button 
+                    onClick={() => toast.success('Jobs module coming soon!')}
+                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors"
+                  >
                     View Details
                   </button>
                 </div>
@@ -396,8 +420,11 @@ export default function Dashboard() {
                   <Users className="w-8 h-8 text-emerald-600 mb-2" />
                   <p className="text-2xl font-bold mt-2 text-slate-800 dark:text-white">47</p>
                   <p className="text-slate-500 dark:text-slate-400">Active Clients</p>
-                  <button className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md opacity-80 cursor-default">
-                    CRM
+                  <button 
+                    onClick={() => navigate('/crm')}
+                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
+                  >
+                    Open CRM
                   </button>
                 </div>
 
@@ -479,6 +506,12 @@ export default function Dashboard() {
                     <div className="h-2 w-3/4 bg-emerald-500 rounded-full"></div>
                   </div>
                   <p className="text-xs mt-2 text-slate-500 dark:text-slate-400">75% attendance this week</p>
+                  <button 
+                    onClick={() => navigate('/hr')}
+                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
+                  >
+                    Manage HR
+                  </button>
                 </div>
 
                 <div className="neu-raised p-6 rounded-3xl stat-card">
@@ -515,6 +548,12 @@ export default function Dashboard() {
                       <span className="text-slate-500 dark:text-slate-400">35 hrs</span>
                     </li>
                   </ul>
+                  <button 
+                    onClick={() => navigate('/hr/attendance')}
+                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
+                  >
+                    View Attendance
+                  </button>
                 </div>
               </div>
             </motion.section>
