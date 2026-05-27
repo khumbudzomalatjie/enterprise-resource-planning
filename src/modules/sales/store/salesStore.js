@@ -22,9 +22,10 @@ const useSalesStore = create((set, get) => ({
   },
 
   fetchQuotation: async (id) => {
+    set({ loading: true })
     const { data, error } = await salesApi.getQuotation(id)
-    if (error) return { success: false, error: error.message }
-    set({ selectedQuotation: data })
+    if (error) { set({ error: error.message, loading: false }); return { success: false, error: error.message } }
+    set({ selectedQuotation: data, loading: false })
     return { success: true, data }
   },
 
@@ -39,9 +40,20 @@ const useSalesStore = create((set, get) => ({
     const { data, error } = await salesApi.updateQuotationStatus(id, status)
     if (error) return { success: false, error: error.message }
     set(state => ({
-      quotations: state.quotations.map(q => q.id === id ? data : q)
+      quotations: state.quotations.map(q => q.id === id ? data : q),
+      selectedQuotation: state.selectedQuotation?.id === id ? data : state.selectedQuotation
     }))
     return { success: true, data }
+  },
+
+  deleteQuotation: async (id) => {
+    const { error } = await salesApi.deleteQuotation(id)
+    if (error) return { success: false, error: error.message }
+    set(state => ({
+      quotations: state.quotations.filter(q => q.id !== id),
+      selectedQuotation: state.selectedQuotation?.id === id ? null : state.selectedQuotation
+    }))
+    return { success: true }
   },
 
   fetchInvoices: async (filters = {}) => {
