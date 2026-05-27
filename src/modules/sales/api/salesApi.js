@@ -1,7 +1,9 @@
 import { supabase } from '../../../lib/supabaseClient'
 
 export const salesApi = {
-  // Quotations
+  // ============================================
+  // QUOTATIONS
+  // ============================================
   async getQuotations(filters = {}) {
     let query = supabase
       .from('quotations')
@@ -17,7 +19,6 @@ export const salesApi = {
   },
 
   async getQuotation(id) {
-    // Fetch quotation with items properly
     const { data: quotation, error: qError } = await supabase
       .from('quotations')
       .select('*, clients(*)')
@@ -26,30 +27,21 @@ export const salesApi = {
 
     if (qError) return { error: qError }
 
-    // Fetch items separately to ensure they load
     const { data: items, error: iError } = await supabase
       .from('quotation_items')
       .select('*')
       .eq('quotation_id', id)
       .order('item_number', { ascending: true })
 
-    if (iError) {
-      console.error('Items fetch error:', iError)
-    }
-
     return { 
-      data: { 
-        ...quotation, 
-        quotation_items: items || [] 
-      }, 
+      data: { ...quotation, quotation_items: items || [] }, 
       error: null 
     }
   },
 
   async createQuotation(quotationData, items) {
-    // Generate quotation number
     const yearSuffix = new Date().getFullYear().toString().slice(-2)
-    const { count, error: countError } = await supabase
+    const { count } = await supabase
       .from('quotations')
       .select('*', { count: 'exact', head: true })
       .like('quotation_number', `Q-${yearSuffix}-%`)
@@ -57,7 +49,6 @@ export const salesApi = {
     const nextNum = String((count || 0) + 1).padStart(4, '0')
     const quotationNumber = `Q-${yearSuffix}-${nextNum}`
     
-    // Insert quotation
     const { data: quotation, error: qError } = await supabase
       .from('quotations')
       .insert([{ 
@@ -73,7 +64,6 @@ export const salesApi = {
       return { error: qError }
     }
 
-    // Insert items
     if (items && items.length > 0) {
       const itemsToInsert = items.map((item, index) => ({
         quotation_id: quotation.id,
@@ -97,7 +87,6 @@ export const salesApi = {
       }
     }
 
-    // Fetch complete quotation with items
     return await this.getQuotation(quotation.id)
   },
 
@@ -112,14 +101,8 @@ export const salesApi = {
   },
 
   async updateQuotationStatus(id, status) {
-    const updates = { 
-      status,
-      updated_at: new Date().toISOString()
-    }
-    
-    if (status === 'converted') {
-      updates.converted_to_invoice = true
-    }
+    const updates = { status, updated_at: new Date().toISOString() }
+    if (status === 'converted') updates.converted_to_invoice = true
     
     const { data, error } = await supabase
       .from('quotations')
@@ -130,7 +113,30 @@ export const salesApi = {
     return { data, error }
   },
 
-  // Quotation Items
+  async deleteQuotation(id) {
+    // Delete items first (cascade should handle this, but being explicit)
+    const { error: itemsError } = await supabase
+      .from('quotation_items')
+      .delete()
+      .eq('quotation_id', id)
+    
+    if (itemsError) {
+      console.error('Error deleting items:', itemsError)
+      return { error: itemsError }
+    }
+
+    // Delete the quotation
+    const { error } = await supabase
+      .from('quotations')
+      .delete()
+      .eq('id', id)
+    
+    return { error }
+  },
+
+  // ============================================
+  // QUOTATION ITEMS
+  // ============================================
   async addQuotationItem(itemData) {
     const { data, error } = await supabase
       .from('quotation_items')
@@ -174,7 +180,9 @@ export const salesApi = {
     return { error }
   },
 
-  // Invoices
+  // ============================================
+  // INVOICES
+  // ============================================
   async getInvoices(filters = {}) {
     let query = supabase
       .from('invoices')
@@ -218,7 +226,6 @@ export const salesApi = {
         discount_percent: item.discount_percent || 0,
         tax_percent: item.tax_percent || 15
       }))
-
       await supabase.from('invoice_items').insert(itemsToInsert)
     }
 
@@ -254,15 +261,15 @@ export const salesApi = {
     }))
 
     const result = await this.createInvoice(invoiceData, items)
-    
     if (!result.error) {
       await this.updateQuotationStatus(quotationId, 'converted')
     }
-
     return result
   },
 
-  // Payments
+  // ============================================
+  // PAYMENTS
+  // ============================================
   async getPayments(invoiceId = null) {
     let query = supabase
       .from('payments')
@@ -270,7 +277,6 @@ export const salesApi = {
       .order('payment_date', { ascending: false })
 
     if (invoiceId) query = query.eq('invoice_id', invoiceId)
-
     const { data, error } = await query
     return { data, error }
   },
@@ -287,22 +293,18 @@ export const salesApi = {
       if (invoice) {
         const totalPaid = (invoice.payments || []).reduce((sum, p) => sum + (p.amount || 0), 0) + (paymentData.amount || 0)
         const newStatus = totalPaid >= invoice.total_amount ? 'paid' : 'partially_paid'
-        
         await supabase
           .from('invoices')
-          .update({ 
-            amount_paid: totalPaid,
-            status: newStatus,
-            last_payment_date: paymentData.payment_date
-          })
+          .update({ amount_paid: totalPaid, status: newStatus, last_payment_date: paymentData.payment_date })
           .eq('id', paymentData.invoice_id)
       }
     }
-
     return { data, error }
   },
 
-  // Products/Services
+  // ============================================
+  // PRODUCTS/SERVICES
+  // ============================================
   async getProductsServices() {
     const { data, error } = await supabase
       .from('products_services')
@@ -312,16 +314,9 @@ export const salesApi = {
     return { data, error }
   },
 
-  // Sales Targets
-  async getSalesTargets() {
-    const { data, error } = await supabase
-      .from('sales_targets')
-      .select('*')
-      .order('start_date', { ascending: false })
-    return { data, error }
-  },
-
-  // Dashboard Stats
+  // ============================================
+  // DASHBOARD STATS
+  // ============================================
   async getSalesStats() {
     const currentMonth = new Date().toISOString().slice(0, 7)
     const [
