@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import useAuthStore from '../store/authStore'
 import useThemeStore from '../store/themeStore'
 import Navbar from '../components/Navbar'
+import { USER_ROLES } from '../types/authTypes'
+import toast from 'react-hot-toast'
 import { 
   Users, 
   Briefcase, 
@@ -25,17 +27,19 @@ import {
   Sparkles,
   Sun,
   Moon,
-  ChevronRight
+  UserPlus,
+  Shield
 } from 'lucide-react'
 
 export default function Dashboard() {
   const { user, profile } = useAuthStore()
   const { isDark, toggleTheme } = useThemeStore()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('job')
   const [logoError, setLogoError] = useState(false)
-  const navigate = useNavigate()
 
   const userName = profile?.full_name || user?.email?.split('@')[0] || 'User'
+  const userRole = profile?.role
 
   const tabs = [
     { id: 'job', label: 'JOB', icon: '📋' },
@@ -44,33 +48,132 @@ export default function Dashboard() {
     { id: 'hr', label: 'Human Resources', icon: '👥' },
   ]
 
+  // Module definitions with routes and required roles
   const modules = [
-    { icon: Users, label: 'Human Resources', description: 'Staff lifecycle, recruitment', path: '/hr' },
-    { icon: CreditCard, label: 'Payroll', description: 'Salary, taxes, compliance', path: '/payroll' },
-    { icon: Truck, label: 'Fleet Management', description: 'Vehicle tracking, maintenance', path: '/fleet' },
-    { icon: Package, label: 'Inventory', description: 'Stock, supplies, warehouses', path: '/inventory' },
-    { icon: ShoppingCart, label: 'Procurement', description: 'Purchase orders, vendors', path: '/procurement' },
-    { icon: Landmark, label: 'Finance', description: 'Accounting, ledgers, budget', path: '/finance' },
-    { icon: TrendingUp, label: 'Sales', description: 'Orders, CRM, invoicing', path: '/sales' },
-    { icon: Database, label: 'Assets', description: 'Depreciation, asset register', path: '/assets' },
-    { icon: Briefcase, label: 'Jobs', description: 'Work orders, task scheduling', path: '/jobs' },
-    { icon: Smartphone, label: 'Mobile Cleaner', description: 'Field app, route updates', path: '/mobile' },
-    { icon: FileText, label: 'Reporting', description: 'BI dashboards, export analytics', path: '/reports' },
-    { icon: Calendar, label: 'Events', description: 'Scheduling, logistics, tasks', path: '/events' },
-    { icon: FolderOpen, label: 'Documents', description: 'DMS, contracts, cloud storage', path: '/documents' },
+    { 
+      icon: Users, 
+      label: 'Human Resources', 
+      description: 'Staff lifecycle, recruitment',
+      path: '/hr',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.HR_MANAGER, USER_ROLES.OPERATIONS_MANAGER]
+    },
+    { 
+      icon: CreditCard, 
+      label: 'Payroll', 
+      description: 'Salary, taxes, compliance',
+      path: '/payroll',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.FINANCE_OFFICER, USER_ROLES.HR_MANAGER]
+    },
+    { 
+      icon: Truck, 
+      label: 'Fleet Management', 
+      description: 'Vehicle tracking, maintenance',
+      path: '/fleet',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER]
+    },
+    { 
+      icon: Package, 
+      label: 'Inventory', 
+      description: 'Stock, supplies, warehouses',
+      path: '/inventory',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER]
+    },
+    { 
+      icon: ShoppingCart, 
+      label: 'Procurement', 
+      description: 'Purchase orders, vendors',
+      path: '/procurement',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.FINANCE_OFFICER]
+    },
+    { 
+      icon: Landmark, 
+      label: 'Finance', 
+      description: 'Accounting, ledgers, budget',
+      path: '/finance',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.FINANCE_OFFICER]
+    },
+    { 
+      icon: TrendingUp, 
+      label: 'Sales', 
+      description: 'Orders, CRM, invoicing',
+      path: '/sales',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.SALES_AGENT]
+    },
+    { 
+      icon: Database, 
+      label: 'Assets', 
+      description: 'Depreciation, asset register',
+      path: '/assets',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.FINANCE_OFFICER]
+    },
+    { 
+      icon: Briefcase, 
+      label: 'Jobs', 
+      description: 'Work orders, task scheduling',
+      path: '/jobs',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SUPERVISOR]
+    },
+    { 
+      icon: Smartphone, 
+      label: 'Mobile Cleaner', 
+      description: 'Field app, route updates',
+      path: '/mobile',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.CLEANER]
+    },
+    { 
+      icon: FileText, 
+      label: 'Reporting', 
+      description: 'BI dashboards, export analytics',
+      path: '/reports',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.FINANCE_OFFICER, USER_ROLES.HR_MANAGER]
+    },
+    { 
+      icon: Calendar, 
+      label: 'Events', 
+      description: 'Scheduling, logistics, tasks',
+      path: '/events',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER]
+    },
+    { 
+      icon: FolderOpen, 
+      label: 'Documents', 
+      description: 'DMS, contracts, cloud storage',
+      path: '/documents',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.HR_MANAGER]
+    },
   ]
 
-  const handleModuleClick = (path) => {
-    // Only navigate if the module is available (HR module is built)
-    if (path === '/hr') {
-      navigate(path)
+  const handleModuleClick = (module) => {
+    // Check if user has permission
+    const hasAccess = module.roles.includes(userRole) || userRole === USER_ROLES.SUPER_ADMIN
+    
+    if (!hasAccess) {
+      toast.error(`You don't have access to ${module.label}`)
+      return
     }
-    // Other modules will be available as they are built
+    
+    // Check if module route exists (only HR and Payroll are built so far)
+    const availableModules = ['/hr', '/payroll', '/dashboard', '/users']
+    
+    if (availableModules.includes(module.path)) {
+      navigate(module.path)
+    } else {
+      toast.success(`${module.label} module coming soon!`, {
+        icon: '🚧',
+        duration: 3000,
+      })
+    }
   }
 
-  const isModuleAvailable = (path) => {
-    // Currently only HR module is built
-    return path === '/hr'
+  // Check if module is accessible
+  const isModuleAccessible = (module) => {
+    return module.roles.includes(userRole) || userRole === USER_ROLES.SUPER_ADMIN
+  }
+
+  // Check if module is built
+  const isModuleBuilt = (module) => {
+    const builtModules = ['/hr', '/payroll']
+    return builtModules.includes(module.path)
   }
 
   return (
@@ -153,7 +256,8 @@ export default function Dashboard() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {modules.map((module, index) => {
-              const available = isModuleAvailable(module.path)
+              const accessible = isModuleAccessible(module)
+              const built = isModuleBuilt(module)
               
               return (
                 <motion.div
@@ -161,37 +265,44 @@ export default function Dashboard() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  onClick={() => available && handleModuleClick(module.path)}
-                  className={`neu-raised rounded-2xl p-5 transition-all flex items-start gap-3 ${
-                    available 
-                      ? 'hover:scale-[1.02] cursor-pointer hover:shadow-lg' 
-                      : 'opacity-50 cursor-not-allowed'
-                  }`}
-                  title={available ? `Go to ${module.label}` : 'Coming soon'}
+                  onClick={() => handleModuleClick(module)}
+                  className={`
+                    neu-raised rounded-2xl p-5 transition-all flex items-start gap-3 cursor-pointer
+                    ${accessible && built 
+                      ? 'hover:scale-[1.02] hover:shadow-lg' 
+                      : accessible && !built
+                      ? 'hover:scale-[1.02] opacity-75'
+                      : 'opacity-40 cursor-not-allowed'
+                    }
+                  `}
+                  title={!accessible 
+                    ? 'You do not have access to this module' 
+                    : !built 
+                    ? 'Coming soon!'
+                    : `Go to ${module.label}`
+                  }
                 >
                   <module.icon className={`w-8 h-8 flex-shrink-0 ${
-                    available ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'
+                    accessible ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'
                   }`} />
                   <div className="flex-1">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
                       <h3 className={`font-bold text-lg ${
-                        available ? 'text-slate-800 dark:text-white' : 'text-slate-500'
+                        accessible ? 'text-slate-800 dark:text-white' : 'text-slate-400'
                       }`}>
                         {module.label}
                       </h3>
-                      {available && (
-                        <ChevronRight className="w-4 h-4 text-emerald-600" />
+                      {built && accessible && (
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Available"></span>
+                      )}
+                      {!accessible && (
+                        <Shield className="w-4 h-4 text-slate-400" title="Restricted access" />
                       )}
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{module.description}</p>
-                    {!available && (
-                      <span className="inline-block mt-2 text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-500 px-2 py-0.5 rounded-full">
+                    {!built && accessible && (
+                      <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                         Coming Soon
-                      </span>
-                    )}
-                    {available && (
-                      <span className="inline-block mt-2 text-[10px] bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full">
-                        Active
                       </span>
                     )}
                   </div>
@@ -368,12 +479,6 @@ export default function Dashboard() {
                     <div className="h-2 w-3/4 bg-emerald-500 rounded-full"></div>
                   </div>
                   <p className="text-xs mt-2 text-slate-500 dark:text-slate-400">75% attendance this week</p>
-                  <button 
-                    onClick={() => navigate('/hr')}
-                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
-                  >
-                    Go to HR Module
-                  </button>
                 </div>
 
                 <div className="neu-raised p-6 rounded-3xl stat-card">
@@ -383,7 +488,10 @@ export default function Dashboard() {
                   </h2>
                   <p className="text-3xl font-bold mt-2 text-slate-800 dark:text-white">$47,280</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Monthly payroll</p>
-                  <button className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md opacity-80 cursor-default">
+                  <button 
+                    onClick={() => navigate('/payroll')}
+                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
+                  >
                     Process Payroll
                   </button>
                 </div>
@@ -407,12 +515,6 @@ export default function Dashboard() {
                       <span className="text-slate-500 dark:text-slate-400">35 hrs</span>
                     </li>
                   </ul>
-                  <button 
-                    onClick={() => navigate('/hr')}
-                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
-                  >
-                    View HR Details
-                  </button>
                 </div>
               </div>
             </motion.section>
