@@ -114,4 +114,34 @@ const useAttendanceStore = create((set, get) => ({
   },
 
   generateTimesheet: async (employeeId, periodStart, periodEnd) => {
-    const { data, error }
+    const { data, error } = await attendanceApi.generateTimesheet(employeeId, periodStart, periodEnd)
+    if (error) return { success: false, error: error.message }
+    return { success: true, data }
+  },
+
+  // Policy Actions
+  fetchPolicies: async () => {
+    const { data, error } = await attendanceApi.getAttendancePolicies()
+    if (error) return { success: false, error: error.message }
+    set({ policies: data })
+    return { success: true, data }
+  },
+
+  fetchHolidays: async (year) => {
+    const { data, error } = await attendanceApi.getHolidays(year)
+    if (error) return { success: false, error: error.message }
+    set({ holidays: data })
+    return { success: true, data }
+  },
+
+  // Stats
+  fetchAttendanceStats: async (date) => {
+    const stats = await attendanceApi.getAttendanceStats(date)
+    set({ stats })
+    return stats
+  },
+
+  clearError: () => set({ error: null }),
+}))
+
+export default useAttendanceStore
