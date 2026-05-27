@@ -10,7 +10,7 @@ import {
   FileText, Calendar, Briefcase, GraduationCap,
   AlertTriangle, Clock, TrendingUp, Sparkles,
   Sun, Moon, ChevronRight, ArrowLeft,
-  CreditCard, QrCode
+  CreditCard, QrCode, ClipboardList, Truck
 } from 'lucide-react'
 
 export default function HRDashboard() {
@@ -384,12 +384,12 @@ export default function HRDashboard() {
                 iconColor: 'text-purple-600 dark:text-purple-400'
               },
               { 
-                icon: QrCode, 
-                label: 'QR Check-in', 
-                description: 'Generate QR codes for employees',
-                path: '/hr/attendance',
-                color: 'bg-indigo-100 dark:bg-indigo-900/30',
-                iconColor: 'text-indigo-600 dark:text-indigo-400'
+                icon: ClipboardList, 
+                label: 'Operations & Jobs', 
+                description: 'Job scheduling, teams, routes, quality',
+                path: '/operations',
+                color: 'bg-orange-100 dark:bg-orange-900/30',
+                iconColor: 'text-orange-600 dark:text-orange-400'
               },
             ].map((module, index) => (
               <motion.div
