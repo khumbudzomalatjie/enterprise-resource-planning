@@ -17,12 +17,33 @@ export const salesApi = {
   },
 
   async getQuotation(id) {
-    const { data, error } = await supabase
+    // Fetch quotation with items properly
+    const { data: quotation, error: qError } = await supabase
       .from('quotations')
-      .select('*, quotation_items(*), clients(*)')
+      .select('*, clients(*)')
       .eq('id', id)
       .single()
-    return { data, error }
+
+    if (qError) return { error: qError }
+
+    // Fetch items separately to ensure they load
+    const { data: items, error: iError } = await supabase
+      .from('quotation_items')
+      .select('*')
+      .eq('quotation_id', id)
+      .order('item_number', { ascending: true })
+
+    if (iError) {
+      console.error('Items fetch error:', iError)
+    }
+
+    return { 
+      data: { 
+        ...quotation, 
+        quotation_items: items || [] 
+      }, 
+      error: null 
+    }
   },
 
   async createQuotation(quotationData, items) {
@@ -36,7 +57,7 @@ export const salesApi = {
     const nextNum = String((count || 0) + 1).padStart(4, '0')
     const quotationNumber = `Q-${yearSuffix}-${nextNum}`
     
-    // Insert quotation with auto-generated number
+    // Insert quotation
     const { data: quotation, error: qError } = await supabase
       .from('quotations')
       .insert([{ 
@@ -52,7 +73,7 @@ export const salesApi = {
       return { error: qError }
     }
 
-    // Insert items WITHOUT total_price (it's a generated column)
+    // Insert items
     if (items && items.length > 0) {
       const itemsToInsert = items.map((item, index) => ({
         quotation_id: quotation.id,
@@ -63,7 +84,6 @@ export const salesApi = {
         unit_price: item.unit_price || 0,
         discount_percent: item.discount_percent || 0,
         tax_percent: item.tax_percent || 15
-        // DO NOT include total_price - it's auto-generated
       }))
 
       const { error: iError } = await supabase
@@ -72,15 +92,13 @@ export const salesApi = {
 
       if (iError) {
         console.error('Items insert error:', iError)
-        // Delete the quotation if items fail
         await supabase.from('quotations').delete().eq('id', quotation.id)
         return { error: iError }
       }
     }
 
     // Fetch complete quotation with items
-    const result = await this.getQuotation(quotation.id)
-    return result
+    return await this.getQuotation(quotation.id)
   },
 
   async updateQuotation(id, updates) {
@@ -125,7 +143,6 @@ export const salesApi = {
         unit_price: itemData.unit_price || 0,
         discount_percent: itemData.discount_percent || 0,
         tax_percent: itemData.tax_percent || 15
-        // total_price is generated
       }])
       .select()
       .single()
@@ -142,7 +159,6 @@ export const salesApi = {
         unit_price: updates.unit_price,
         discount_percent: updates.discount_percent,
         tax_percent: updates.tax_percent
-        // total_price is generated
       })
       .eq('id', id)
       .select()
@@ -201,7 +217,6 @@ export const salesApi = {
         unit_price: item.unit_price || 0,
         discount_percent: item.discount_percent || 0,
         tax_percent: item.tax_percent || 15
-        // total_price is generated
       }))
 
       await supabase.from('invoice_items').insert(itemsToInsert)
@@ -229,7 +244,7 @@ export const salesApi = {
       notes: `Converted from quotation ${quotation.quotation_number}`
     }
 
-    const items = quotation.quotation_items.map(item => ({
+    const items = (quotation.quotation_items || []).map(item => ({
       description: item.description,
       quantity: item.quantity,
       unit: item.unit,
