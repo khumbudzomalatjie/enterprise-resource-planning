@@ -18,13 +18,41 @@ export default function QuotationDetail() {
   const { isDark, toggleTheme } = useThemeStore()
   const navigate = useNavigate()
   const pdfContainerRef = useRef(null)
+  const previewWrapperRef = useRef(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showAcceptConfirm, setShowAcceptConfirm] = useState(false)
+  const [scale, setScale] = useState(0.55)
 
   useEffect(() => {
     fetchQuotation(id)
   }, [id])
+
+  // Calculate scale to fit container
+  useEffect(() => {
+    const calculateScale = () => {
+      const wrapper = previewWrapperRef.current
+      if (!wrapper) return
+      
+      const containerWidth = wrapper.clientWidth - 32 // padding
+      const containerHeight = wrapper.clientHeight - 32
+      
+      // A4 dimensions in mm converted to pixels at standard DPI
+      const a4Width = 794 // 210mm at 96dpi
+      const a4Height = 1123 // 297mm at 96dpi
+      
+      const scaleX = containerWidth / a4Width
+      const scaleY = containerHeight / a4Height
+      
+      // Use the smaller scale to fit entirely
+      const newScale = Math.min(scaleX, scaleY, 1)
+      setScale(Math.max(0.3, newScale))
+    }
+
+    calculateScale()
+    window.addEventListener('resize', calculateScale)
+    return () => window.removeEventListener('resize', calculateScale)
+  }, [])
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-ZA', {
@@ -96,8 +124,18 @@ export default function QuotationDetail() {
         margin: [0, 0, 0, 0],
         filename: `Quotation_${selectedQuotation?.quotation_number || 'download'}.pdf`,
         image: { type: 'jpeg', quality: 1 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true, width: 794, height: 1123 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true, 
+          letterRendering: true,
+          width: 794,
+          height: 1123
+        },
+        jsPDF: { 
+          unit: 'mm', 
+          format: 'a4', 
+          orientation: 'portrait' 
+        },
         pagebreak: { mode: 'avoid-all' }
       }
 
@@ -114,7 +152,19 @@ export default function QuotationDetail() {
     const element = pdfContainerRef.current
     if (!element) return
     const printWindow = window.open('', '_blank')
-    printWindow.document.write(`<html><head><title>Quotation</title><style>@page{size:A4;margin:0}body{margin:0}@media print{body{-webkit-print-color-adjust:exact}}</style></head><body>${element.innerHTML}</body></html>`)
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Quotation ${selectedQuotation?.quotation_number}</title>
+          <style>
+            @page { size: A4; margin: 0; }
+            body { margin: 0; padding: 0; display: flex; justify-content: center; }
+            @media print { body { -webkit-print-color-adjust: exact; } }
+          </style>
+        </head>
+        <body>${element.innerHTML}</body>
+      </html>
+    `)
     printWindow.document.close()
     setTimeout(() => printWindow.print(), 500)
   }
@@ -139,15 +189,36 @@ export default function QuotationDetail() {
     <div className={`min-h-screen font-['Inter'] transition-colors duration-300 ${isDark ? 'dark' : ''}`}>
       {/* Fullscreen Modal */}
       {isFullscreen && (
-        <div className="fixed inset-0 z-50 bg-gray-900/95 flex items-center justify-center p-4">
-          <div className="absolute top-4 right-4 flex gap-3 z-10">
-            <button onClick={downloadPDF} className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 text-sm"><Download className="w-4 h-4" /> Download PDF</button>
-            <button onClick={printQuotation} className="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-2 text-sm"><Printer className="w-4 h-4" /> Print</button>
-            <button onClick={() => setIsFullscreen(false)} className="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 flex items-center gap-2 text-sm"><X className="w-4 h-4" /> Close</button>
+        <div className="fixed inset-0 z-50 bg-gray-900/95 flex flex-col">
+          {/* Toolbar */}
+          <div className="flex items-center justify-between px-6 py-3 bg-gray-800 border-b border-gray-700">
+            <span className="text-white font-semibold">{quote.quotation_number}</span>
+            <div className="flex gap-3">
+              <button onClick={downloadPDF} className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 text-sm">
+                <Download className="w-4 h-4" /> Download PDF
+              </button>
+              <button onClick={printQuotation} className="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-2 text-sm">
+                <Printer className="w-4 h-4" /> Print
+              </button>
+              <button onClick={() => setIsFullscreen(false)} className="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 flex items-center gap-2 text-sm">
+                <X className="w-4 h-4" /> Close
+              </button>
+            </div>
           </div>
-          <div className="bg-white rounded-lg shadow-2xl overflow-auto" style={{ width: '210mm', maxHeight: '95vh' }}>
-            <div ref={pdfContainerRef}>
-              <QuotationPDF quotation={quote} items={quote.quotation_items || []} />
+          {/* Fullscreen Preview */}
+          <div className="flex-1 flex items-center justify-center p-4 overflow-auto bg-gray-900">
+            <div 
+              className="bg-white shadow-2xl"
+              style={{
+                width: '210mm',
+                minHeight: '297mm',
+                transform: `scale(${Math.min(1, (window.innerHeight - 100) / 1123)})`,
+                transformOrigin: 'center center'
+              }}
+            >
+              <div ref={pdfContainerRef}>
+                <QuotationPDF quotation={quote} items={quote.quotation_items || []} />
+              </div>
             </div>
           </div>
         </div>
@@ -220,6 +291,7 @@ export default function QuotationDetail() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
+        {/* Breadcrumb */}
         <div className="flex items-center gap-2 mb-6 text-sm">
           <Link to="/sales" className="text-slate-500 hover:text-emerald-600">Sales</Link>
           <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -228,34 +300,62 @@ export default function QuotationDetail() {
           <span className="text-slate-800 dark:text-white font-medium">{quote.quotation_number}</span>
         </div>
 
+        {/* Header */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
               <FileText className="w-8 h-8 text-emerald-600" />{quote.quotation_number}
             </h1>
             <p className="text-slate-500 dark:text-slate-400 mt-1">
-              {quote.client_name} · {formatDate(quote.quotation_date)} · <span className="font-semibold text-emerald-600 ml-2">{formatCurrency(quote.total_amount)}</span>
+              {quote.client_name} · {formatDate(quote.quotation_date)} · 
+              <span className="font-semibold text-emerald-600 ml-2">{formatCurrency(quote.total_amount)}</span>
             </p>
           </div>
           <div className="flex gap-3 flex-wrap">
-            <button onClick={() => setIsFullscreen(true)} className="neu-raised neu-btn px-4 py-2 rounded-xl flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700"><Maximize2 className="w-4 h-4" /><span className="hidden sm:inline">Full Preview</span></button>
-            <button onClick={downloadPDF} className="neu-raised neu-btn px-4 py-2 rounded-xl flex items-center gap-2 bg-emerald-600 text-white hover:bg-emerald-700"><Download className="w-4 h-4" /><span className="hidden sm:inline">PDF</span></button>
-            <button onClick={printQuotation} className="neu-raised neu-btn px-4 py-2 rounded-xl flex items-center gap-2 bg-purple-600 text-white hover:bg-purple-700"><Printer className="w-4 h-4" /><span className="hidden sm:inline">Print</span></button>
-            <button onClick={() => navigate(`/sales/quotations/${id}/edit`)} className="neu-raised neu-btn px-4 py-2 rounded-xl flex items-center gap-2 bg-slate-600 text-white hover:bg-slate-700"><Edit className="w-4 h-4" /><span className="hidden sm:inline">Edit</span></button>
-            <button onClick={() => setShowDeleteConfirm(true)} className="neu-raised neu-btn px-4 py-2 rounded-xl flex items-center gap-2 bg-red-600 text-white hover:bg-red-700"><Trash2 className="w-4 h-4" /><span className="hidden sm:inline">Delete</span></button>
+            <button onClick={() => setIsFullscreen(true)} className="neu-raised neu-btn px-4 py-2 rounded-xl flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700">
+              <Maximize2 className="w-4 h-4" /><span className="hidden sm:inline">Full Preview</span>
+            </button>
+            <button onClick={downloadPDF} className="neu-raised neu-btn px-4 py-2 rounded-xl flex items-center gap-2 bg-emerald-600 text-white hover:bg-emerald-700">
+              <Download className="w-4 h-4" /><span className="hidden sm:inline">PDF</span>
+            </button>
+            <button onClick={printQuotation} className="neu-raised neu-btn px-4 py-2 rounded-xl flex items-center gap-2 bg-purple-600 text-white hover:bg-purple-700">
+              <Printer className="w-4 h-4" /><span className="hidden sm:inline">Print</span>
+            </button>
+            <button onClick={() => navigate(`/sales/quotations/${id}/edit`)} className="neu-raised neu-btn px-4 py-2 rounded-xl flex items-center gap-2 bg-slate-600 text-white hover:bg-slate-700">
+              <Edit className="w-4 h-4" /><span className="hidden sm:inline">Edit</span>
+            </button>
+            <button onClick={() => setShowDeleteConfirm(true)} className="neu-raised neu-btn px-4 py-2 rounded-xl flex items-center gap-2 bg-red-600 text-white hover:bg-red-700">
+              <Trash2 className="w-4 h-4" /><span className="hidden sm:inline">Delete</span>
+            </button>
           </div>
         </motion.div>
 
         {/* Status Bar */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="neu-raised rounded-2xl p-4 mb-6 flex flex-wrap items-center gap-4">
           <span className="text-sm text-slate-500">Status:</span>
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${quote.status === 'accepted' ? 'bg-emerald-100 text-emerald-700' : quote.status === 'sent' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
+          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+            quote.status === 'accepted' ? 'bg-emerald-100 text-emerald-700' : 
+            quote.status === 'sent' ? 'bg-blue-100 text-blue-700' : 
+            'bg-gray-100 text-gray-700'
+          }`}>
             {quote.status?.replace('_', ' ')}
           </span>
           <div className="border-l border-slate-300 pl-4 flex flex-wrap gap-2">
-            {quote.status !== 'sent' && <button onClick={() => handleStatusChange('sent')} className="px-3 py-1 rounded-lg text-xs font-medium hover:bg-blue-100 text-slate-600"><Send className="w-3 h-3 inline mr-1" />Mark Sent</button>}
-            {quote.status !== 'accepted' && <button onClick={() => handleStatusChange('accepted')} className="px-3 py-1 rounded-lg text-xs font-medium hover:bg-emerald-100 text-slate-600"><Briefcase className="w-3 h-3 inline mr-1" />Accept → Create Job</button>}
-            {quote.status !== 'rejected' && <button onClick={() => handleStatusChange('rejected')} className="px-3 py-1 rounded-lg text-xs font-medium hover:bg-red-100 text-slate-600"><XCircle className="w-3 h-3 inline mr-1" />Reject</button>}
+            {quote.status !== 'sent' && (
+              <button onClick={() => handleStatusChange('sent')} className="px-3 py-1 rounded-lg text-xs font-medium hover:bg-blue-100 text-slate-600">
+                <Send className="w-3 h-3 inline mr-1" />Mark Sent
+              </button>
+            )}
+            {quote.status !== 'accepted' && (
+              <button onClick={() => handleStatusChange('accepted')} className="px-3 py-1 rounded-lg text-xs font-medium hover:bg-emerald-100 text-slate-600">
+                <Briefcase className="w-3 h-3 inline mr-1" />Accept → Create Job
+              </button>
+            )}
+            {quote.status !== 'rejected' && (
+              <button onClick={() => handleStatusChange('rejected')} className="px-3 py-1 rounded-lg text-xs font-medium hover:bg-red-100 text-slate-600">
+                <XCircle className="w-3 h-3 inline mr-1" />Reject
+              </button>
+            )}
           </div>
         </motion.div>
 
@@ -317,14 +417,48 @@ export default function QuotationDetail() {
           </div>
         </motion.div>
 
-        {/* A4 Preview */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="neu-raised rounded-3xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2"><FileText className="w-5 h-5 text-emerald-600" />A4 Preview</h2>
-            <button onClick={() => setIsFullscreen(true)} className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center gap-1"><Maximize2 className="w-4 h-4" /> Full Screen</button>
+        {/* A4 Preview - FIXED SCALING */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ delay: 0.3 }} 
+          className="neu-raised rounded-3xl overflow-hidden"
+        >
+          {/* Preview Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+            <h2 className="text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+              <FileText className="w-5 h-5 text-emerald-600" />
+              A4 Document Preview
+            </h2>
+            <button 
+              onClick={() => setIsFullscreen(true)} 
+              className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+            >
+              <Maximize2 className="w-4 h-4" /> Full Screen
+            </button>
           </div>
-          <div className="bg-white rounded-xl overflow-hidden shadow-inner border border-slate-200" style={{ maxHeight: '600px', overflow: 'auto' }}>
-            <div style={{ transform: 'scale(0.48)', transformOrigin: 'top left', width: '208%' }}>
+
+          {/* Preview Container - Fills available space */}
+          <div 
+            ref={previewWrapperRef}
+            className="bg-slate-100 dark:bg-slate-900 flex items-center justify-center overflow-auto"
+            style={{ 
+              minHeight: '600px',
+              maxHeight: '80vh',
+              padding: '20px'
+            }}
+          >
+            {/* A4 Document Wrapper */}
+            <div 
+              className="bg-white shadow-2xl flex-shrink-0"
+              style={{
+                width: '210mm',
+                minHeight: '297mm',
+                transform: `scale(${scale})`,
+                transformOrigin: 'center center',
+                margin: 'auto'
+              }}
+            >
               <div ref={pdfContainerRef}>
                 <QuotationPDF quotation={quote} items={quote.quotation_items || []} />
               </div>
