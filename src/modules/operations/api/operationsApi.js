@@ -1,304 +1,213 @@
-import { supabase } from '../../../lib/supabaseClient'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import Navbar from '../../../components/Navbar'
+import useOperationsStore from '../store/operationsStore'
+import useThemeStore from '../../../store/themeStore'
+import toast from 'react-hot-toast'
+import { 
+  Briefcase, Calendar, Clock, CheckCircle2, AlertTriangle,
+  Users, MapPin, BarChart3, Plus, TrendingUp,
+  Sparkles, Sun, Moon, ChevronRight, ArrowLeft,
+  Truck, ClipboardCheck
+} from 'lucide-react'
 
-export const operationsApi = {
-  // Jobs
-  async getJobs(filters = {}) {
-    let query = supabase
-      .from('jobs')
-      .select('*, clients(company_name, client_code), job_categories(name, color), teams(team_name)')
-      .order('scheduled_date', { ascending: true })
+export default function OperationsDashboard() {
+  const { stats, fetchOperationsStats, fetchJobs, fetchJobCategories, jobCategories, loading } = useOperationsStore()
+  const { isDark, toggleTheme } = useThemeStore()
+  const navigate = useNavigate()
+  const [todayJobs, setTodayJobs] = useState([])
+  const [recentJobs, setRecentJobs] = useState([])
 
-    if (filters.status) query = query.eq('status', filters.status)
-    if (filters.priority) query = query.eq('priority', filters.priority)
-    if (filters.client_id) query = query.eq('client_id', filters.client_id)
-    if (filters.date_from) query = query.gte('scheduled_date', filters.date_from)
-    if (filters.date_to) query = query.lte('scheduled_date', filters.date_to)
-    if (filters.search) query = query.or(`title.ilike.%${filters.search}%,job_number.ilike.%${filters.search}%`)
+  useEffect(() => {
+    loadData()
+  }, [])
 
-    const { data, error } = await query
-    return { data, error }
-  },
-
-  async getJob(id) {
-    const { data, error } = await supabase
-      .from('jobs')
-      .select('*, clients(*), job_categories(*), teams(*), job_checklist_items(*), job_assignments(*, employees(first_name, last_name)), quality_inspections(*)')
-      .eq('id', id)
-      .single()
-    return { data, error }
-  },
-
-  async createJob(jobData) {
-    const { data, error } = await supabase
-      .from('jobs')
-      .insert([jobData])
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  async updateJob(id, updates) {
-    const { data, error } = await supabase
-      .from('jobs')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  async updateJobStatus(id, status) {
-    const updates = { status, updated_at: new Date().toISOString() }
-    if (status === 'in_progress') updates.actual_start_time = new Date().toISOString()
-    if (status === 'completed') updates.actual_end_time = new Date().toISOString()
-    
-    const { data, error } = await supabase
-      .from('jobs')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  async deleteJob(id) {
-    const { error } = await supabase
-      .from('jobs')
-      .update({ status: 'cancelled' })
-      .eq('id', id)
-    return { error }
-  },
-
-  // Job Categories
-  async getJobCategories() {
-    const { data, error } = await supabase
-      .from('job_categories')
-      .select('*')
-      .eq('is_active', true)
-      .order('name')
-    return { data, error }
-  },
-
-  // Checklist
-  async getChecklistItems(jobId) {
-    const { data, error } = await supabase
-      .from('job_checklist_items')
-      .select('*')
-      .eq('job_id', jobId)
-      .order('item_number')
-    return { data, error }
-  },
-
-  async addChecklistItem(itemData) {
-    const { data, error } = await supabase
-      .from('job_checklist_items')
-      .insert([itemData])
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  async updateChecklistItem(id, updates) {
-    const { data, error } = await supabase
-      .from('job_checklist_items')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  // Teams
-  async getTeams() {
-    const { data, error } = await supabase
-      .from('teams')
-      .select('*, team_members(*, employees(first_name, last_name, employee_code))')
-      .eq('is_active', true)
-      .order('team_name')
-    return { data, error }
-  },
-
-  async createTeam(teamData) {
-    const { data, error } = await supabase
-      .from('teams')
-      .insert([teamData])
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  async addTeamMember(memberData) {
-    const { data, error } = await supabase
-      .from('team_members')
-      .insert([memberData])
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  async removeTeamMember(id) {
-    const { error } = await supabase
-      .from('team_members')
-      .update({ is_active: false })
-      .eq('id', id)
-    return { error }
-  },
-
-  // Job Assignments
-  async assignEmployee(jobId, employeeId, teamId = null) {
-    const { data, error } = await supabase
-      .from('job_assignments')
-      .upsert([{
-        job_id: jobId,
-        employee_id: employeeId,
-        team_id: teamId,
-        status: 'assigned'
-      }], { onConflict: 'job_id,employee_id' })
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  async bulkAssign(jobId, employeeIds) {
-    const assignments = employeeIds.map(empId => ({
-      job_id: jobId,
-      employee_id: empId,
-      status: 'assigned'
-    }))
-    
-    const { data, error } = await supabase
-      .from('job_assignments')
-      .upsert(assignments, { onConflict: 'job_id,employee_id' })
-      .select()
-    return { data, error }
-  },
-
-  // Routes
-  async getRoutes(filters = {}) {
-    let query = supabase
-      .from('routes')
-      .select('*, teams(team_name), route_stops(*, jobs(title, site_address))')
-      .order('route_date', { ascending: false })
-
-    if (filters.date) query = query.eq('route_date', filters.date)
-    if (filters.team_id) query = query.eq('team_id', filters.team_id)
-    if (filters.status) query = query.eq('status', filters.status)
-
-    const { data, error } = await query
-    return { data, error }
-  },
-
-  async createRoute(routeData, stops) {
-    const { data: route, error: rError } = await supabase
-      .from('routes')
-      .insert([routeData])
-      .select()
-      .single()
-
-    if (rError) return { error: rError }
-
-    if (stops && stops.length > 0) {
-      const stopsWithRoute = stops.map((stop, i) => ({
-        ...stop,
-        route_id: route.id,
-        stop_number: i + 1
-      }))
-      await supabase.from('route_stops').insert(stopsWithRoute)
-    }
-
-    return { data: route }
-  },
-
-  async updateRouteStop(id, updates) {
-    const { data, error } = await supabase
-      .from('route_stops')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  // Quality Inspections
-  async getQualityInspections(jobId = null) {
-    let query = supabase
-      .from('quality_inspections')
-      .select('*, jobs(title, job_number, site_address)')
-      .order('inspection_date', { ascending: false })
-
-    if (jobId) query = query.eq('job_id', jobId)
-
-    const { data, error } = await query
-    return { data, error }
-  },
-
-  async createQualityInspection(inspectionData) {
-    const { data, error } = await supabase
-      .from('quality_inspections')
-      .insert([inspectionData])
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  // Supplies
-  async getEquipmentSupplies() {
-    const { data, error } = await supabase
-      .from('equipment_supplies')
-      .select('*')
-      .eq('is_active', true)
-      .order('category')
-    return { data, error }
-  },
-
-  async recordSupplyUsage(usageData) {
-    const { data, error } = await supabase
-      .from('job_supplies_used')
-      .insert([usageData])
-      .select()
-      .single()
-    
-    if (!error) {
-      // Update stock
-      await supabase.rpc('update_supply_stock', {
-        p_supply_id: usageData.supply_id,
-        p_quantity_used: usageData.quantity_used
-      })
-    }
-    
-    return { data, error }
-  },
-
-  // Dashboard Stats
-  async getOperationsStats() {
-    const today = new Date().toISOString().split('T')[0]
-    const [
-      { count: totalJobs },
-      { count: scheduledToday },
-      { count: inProgress },
-      { count: completedToday },
-      { count: overdueJobs },
-      { data: recentJobs },
-      { data: todayJobs }
-    ] = await Promise.all([
-      supabase.from('jobs').select('*', { count: 'exact', head: true }),
-      supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('scheduled_date', today),
-      supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('status', 'in_progress'),
-      supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('status', 'completed').gte('actual_end_time', `${today}T00:00:00`),
-      supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('status', 'overdue'),
-      supabase.from('jobs').select('*, clients(company_name)').order('created_at', { ascending: false }).limit(5),
-      supabase.from('jobs').select('*, clients(company_name), job_categories(name, color)').eq('scheduled_date', today).order('scheduled_start_time')
-    ])
-
-    return {
-      totalJobs: totalJobs || 0,
-      scheduledToday: scheduledToday || 0,
-      inProgress: inProgress || 0,
-      completedToday: completedToday || 0,
-      overdueJobs: overdueJobs || 0,
-      completionRate: totalJobs > 0 ? Math.round((completedToday || 0) / (scheduledToday || 1) * 100) : 0,
-      recentJobs: recentJobs || [],
-      todayJobs: todayJobs || []
-    }
+  const loadData = async () => {
+    const statsData = await fetchOperationsStats()
+    setTodayJobs(statsData?.todayJobs || [])
+    setRecentJobs(statsData?.recentJobs || [])
+    await fetchJobCategories()
   }
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(amount || 0)
+  }
+
+  const getStatusColor = (status) => {
+    const colors = {
+      pending: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
+      scheduled: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+      in_progress: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+      completed: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+      cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+      overdue: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+      on_hold: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+    }
+    return colors[status] || 'bg-slate-100 text-slate-700'
+  }
+
+  const getPriorityColor = (priority) => {
+    const colors = {
+      low: 'text-slate-500',
+      medium: 'text-blue-600',
+      high: 'text-amber-600',
+      urgent: 'text-red-600',
+      emergency: 'text-red-600 animate-pulse',
+    }
+    return colors[priority] || 'text-slate-500'
+  }
+
+  const statCards = [
+    { icon: Briefcase, label: 'Total Jobs', value: stats.totalJobs || 0, color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-900/30' },
+    { icon: Calendar, label: 'Scheduled Today', value: stats.scheduledToday || 0, color: 'text-emerald-600', bg: 'bg-emerald-100 dark:bg-emerald-900/30' },
+    { icon: Clock, label: 'In Progress', value: stats.inProgress || 0, color: 'text-amber-600', bg: 'bg-amber-100 dark:bg-amber-900/30' },
+    { icon: CheckCircle2, label: 'Completed Today', value: stats.completedToday || 0, color: 'text-emerald-600', bg: 'bg-emerald-100 dark:bg-emerald-900/30' },
+    { icon: AlertTriangle, label: 'Overdue', value: stats.overdueJobs || 0, color: 'text-red-600', bg: 'bg-red-100 dark:bg-red-900/30' },
+    { icon: TrendingUp, label: 'Completion Rate', value: `${stats.completionRate || 0}%`, color: 'text-purple-600', bg: 'bg-purple-100 dark:bg-purple-900/30' },
+  ]
+
+  return (
+    <div className={`min-h-screen font-['Inter'] transition-colors duration-300 ${isDark ? 'dark' : ''}`}>
+      <Navbar />
+      
+      <div className="fixed top-20 right-4 z-30 flex items-center gap-4">
+        <div className="neu-inset px-5 py-2 rounded-full flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <span className="text-sm font-semibold tracking-wide text-emerald-800 dark:text-emerald-200 hidden sm:inline">ERP</span>
+        </div>
+        <button onClick={toggleTheme} className="neu-raised neu-btn w-12 h-12 rounded-2xl flex items-center justify-center hover:scale-110">
+          {isDark ? <Sun className="w-6 h-6 text-amber-400" /> : <Moon className="w-6 h-6 text-slate-600" />}
+        </button>
+      </div>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
+        <Link to="/dashboard" className="inline-flex items-center text-slate-600 dark:text-slate-400 hover:text-emerald-600 mb-6">
+          <ArrowLeft className="w-4 h-4 mr-1" /><span className="text-sm">Back to Main Dashboard</span>
+        </Link>
+
+        {/* Header */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <Briefcase className="w-8 h-8 text-emerald-600" />
+              <h1 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-white">Jobs & Operations</h1>
+            </div>
+            <p className="text-slate-500 dark:text-slate-400 ml-11">Job management, team scheduling, routes, and quality control</p>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={() => navigate('/operations/jobs/new')} className="neu-raised neu-btn px-6 py-3 rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-2">
+              <Plus className="w-5 h-5" /><span>New Job</span>
+            </button>
+          </div>
+        </motion.div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+          {statCards.map((stat, i) => (
+            <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }} className="neu-raised rounded-2xl p-4 stat-card">
+              <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center mb-3`}><stat.icon className={`w-5 h-5 ${stat.color}`} /></div>
+              <p className="text-lg font-bold text-slate-800 dark:text-white">{stat.value}</p>
+              <p className="text-xs text-slate-500 mt-1">{stat.label}</p>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Quick Actions */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          {[
+            { label: 'All Jobs', icon: Briefcase, path: '/operations/jobs' },
+            { label: 'Calendar', icon: Calendar, path: '/operations/calendar' },
+            { label: 'Teams', icon: Users, path: '/operations/teams' },
+            { label: 'Quality Checks', icon: ClipboardCheck, path: '/operations/quality' },
+          ].map(action => (
+            <button key={action.label} onClick={() => navigate(action.path)} className="neu-raised neu-btn rounded-2xl p-4 flex flex-col items-center gap-2 hover:scale-105">
+              <action.icon className="w-6 h-6 text-emerald-600" /><span className="text-sm font-medium text-slate-700 dark:text-slate-300">{action.label}</span>
+            </button>
+          ))}
+        </motion.div>
+
+        {/* Job Categories Quick View */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="neu-raised rounded-3xl p-6 mb-8">
+          <h2 className="text-xl font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-purple-600" />Job Categories ({jobCategories.length})
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {jobCategories.map(cat => (
+              <span 
+                key={cat.id}
+                className="px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer hover:scale-105 transition-transform"
+                style={{ backgroundColor: cat.color + '20', color: cat.color, border: '1px solid ' + cat.color + '40' }}
+                title={`${cat.description || cat.name} · ${cat.estimated_duration_minutes} min · ${cat.default_cleaners_required} cleaner(s)`}
+              >
+                {cat.name}
+              </span>
+            ))}
+            {jobCategories.length === 0 && (
+              <p className="text-slate-500 text-sm">No categories loaded. Run the database schema.</p>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Today's Jobs */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="neu-raised rounded-3xl p-6 mb-8">
+          <div className="flex justify-between mb-4">
+            <h2 className="text-xl font-semibold text-slate-800 dark:text-white flex items-center gap-2"><Calendar className="w-5 h-5 text-emerald-600" />Today's Schedule</h2>
+            <Link to="/operations/calendar" className="text-sm text-emerald-600 flex items-center gap-1">Calendar <ChevronRight className="w-4 h-4" /></Link>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-700">
+                  <th className="text-left text-sm font-medium text-slate-500 py-3 px-4">Job #</th>
+                  <th className="text-left text-sm font-medium text-slate-500 py-3 px-4">Client</th>
+                  <th className="text-left text-sm font-medium text-slate-500 py-3 px-4">Category</th>
+                  <th className="text-left text-sm font-medium text-slate-500 py-3 px-4">Time</th>
+                  <th className="text-left text-sm font-medium text-slate-500 py-3 px-4">Priority</th>
+                  <th className="text-left text-sm font-medium text-slate-500 py-3 px-4">Status</th>
+                  <th className="text-left text-sm font-medium text-slate-500 py-3 px-4">Location</th>
+                </tr>
+              </thead>
+              <tbody>
+                {todayJobs.map(job => (
+                  <tr key={job.id} className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer" onClick={() => navigate(`/operations/jobs/${job.id}`)}>
+                    <td className="py-3 px-4 text-sm font-medium text-slate-800 dark:text-white">{job.job_number}</td>
+                    <td className="py-3 px-4 text-sm text-slate-600 dark:text-slate-400">{job.clients?.company_name}</td>
+                    <td className="py-3 px-4">
+                      {job.job_categories ? (
+                        <span className="px-2 py-1 rounded-full text-xs" style={{ backgroundColor: job.job_categories.color + '20', color: job.job_categories.color }}>
+                          {job.job_categories.name}
+                        </span>
+                      ) : '-'}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-slate-600">{job.scheduled_start_time?.slice(0,5) || '-'}</td>
+                    <td className="py-3 px-4"><span className={`text-xs font-medium ${getPriorityColor(job.priority)}`}>{job.priority}</span></td>
+                    <td className="py-3 px-4"><span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(job.status)}`}>{job.status.replace('_', ' ')}</span></td>
+                    <td className="py-3 px-4 text-sm text-slate-500 flex items-center gap-1"><MapPin className="w-3 h-3" />{job.site_city || 'N/A'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {todayJobs.length === 0 && <p className="text-center text-slate-500 py-8">No jobs scheduled for today</p>}
+        </motion.div>
+
+        {/* Recent Jobs */}
+        <div className="neu-raised rounded-3xl p-6">
+          <h2 className="text-xl font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2"><Briefcase className="w-5 h-5 text-emerald-600" />Recent Jobs</h2>
+          <div className="space-y-3">
+            {recentJobs.map(job => (
+              <div key={job.id} className="flex justify-between p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/50 cursor-pointer" onClick={() => navigate(`/operations/jobs/${job.id}`)}>
+                <div>
+                  <p className="font-medium text-slate-800 dark:text-white text-sm">{job.title}</p>
+                  <p className="text-xs text-slate-500">{job.clients?.company_name} · {job.job_number}</p>
+                </div>
+                <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(job.status)}`}>{job.status.replace('_', ' ')}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
+    </div>
+  )
 }
