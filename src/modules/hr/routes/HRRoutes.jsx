@@ -270,6 +270,12 @@ export default function HRRoutes() {
         }
       />
 
+      {/* Redirect to Operations Module */}
+      <Route
+        path="/jobs"
+        element={<Navigate to="/operations" replace />}
+      />
+
       {/* Catch-all redirect for HR */}
       <Route
         path="*"
