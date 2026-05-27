@@ -8,16 +8,17 @@ import toast from 'react-hot-toast'
 import { 
   FileText, Search, Eye, Edit, ChevronRight,
   Sun, Moon, Sparkles, Download, MoreVertical,
-  CheckCircle, XCircle, Clock, Send
+  CheckCircle, XCircle, Clock, Send, Trash2, AlertTriangle
 } from 'lucide-react'
 
 export default function QuotationList() {
-  const { quotations, fetchQuotations, updateQuotationStatus, loading } = useSalesStore()
+  const { quotations, fetchQuotations, updateQuotationStatus, deleteQuotation, loading } = useSalesStore()
   const { isDark, toggleTheme } = useThemeStore()
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [actionMenu, setActionMenu] = useState(null)
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
 
   useEffect(() => {
     loadQuotations()
@@ -46,10 +47,20 @@ export default function QuotationList() {
     setActionMenu(null)
   }
 
+  const handleDelete = async (id) => {
+    const result = await deleteQuotation(id)
+    if (result.success) {
+      toast.success('Quotation deleted successfully')
+      loadQuotations()
+    } else {
+      toast.error('Failed to delete quotation')
+    }
+    setDeleteConfirm(null)
+  }
+
   const handleDownloadPDF = async (quotation) => {
     try {
       const html2pdf = (await import('html2pdf.js')).default
-      // Create a temporary element for PDF
       const tempDiv = document.createElement('div')
       tempDiv.innerHTML = `<div style="padding:20px;font-family:Arial;">
         <h2>Quotation ${quotation.quotation_number}</h2>
@@ -99,17 +110,6 @@ export default function QuotationList() {
       converted: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
     }
     return badges[status] || badges.draft
-  }
-
-  const getStatusIcon = (status) => {
-    const icons = {
-      draft: <Clock className="w-4 h-4" />,
-      sent: <Send className="w-4 h-4" />,
-      accepted: <CheckCircle className="w-4 h-4" />,
-      rejected: <XCircle className="w-4 h-4" />,
-      converted: <CheckCircle className="w-4 h-4" />,
-    }
-    return icons[status] || <Clock className="w-4 h-4" />
   }
 
   return (
@@ -223,12 +223,12 @@ export default function QuotationList() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-700">
-                    <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider py-4 px-4">Quote #</th>
-                    <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider py-4 px-4">Client</th>
-                    <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider py-4 px-4">Date</th>
-                    <th className="text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider py-4 px-4">Total</th>
-                    <th className="text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider py-4 px-4">Status</th>
-                    <th className="text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider py-4 px-4">Actions</th>
+                    <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase py-4 px-4">Quote #</th>
+                    <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase py-4 px-4">Client</th>
+                    <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase py-4 px-4">Date</th>
+                    <th className="text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase py-4 px-4">Total</th>
+                    <th className="text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase py-4 px-4">Status</th>
+                    <th className="text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase py-4 px-4">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -246,24 +246,19 @@ export default function QuotationList() {
                         </p>
                       </td>
                       <td className="py-3 px-4">
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
-                          {formatDate(quote.quotation_date)}
-                        </p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">{formatDate(quote.quotation_date)}</p>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <p className="font-semibold text-sm text-slate-800 dark:text-white">
-                          {formatCurrency(quote.total_amount)}
-                        </p>
+                        <p className="font-semibold text-sm text-slate-800 dark:text-white">{formatCurrency(quote.total_amount)}</p>
                       </td>
                       <td className="py-3 px-4 text-center">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusBadge(quote.status)}`}>
-                          {getStatusIcon(quote.status)}
                           {quote.status?.replace('_', ' ')}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          {/* VIEW Button (Eye) */}
+                          {/* VIEW */}
                           <button
                             onClick={() => navigate(`/sales/quotations/${quote.id}`)}
                             className="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 text-slate-400 hover:text-blue-600 transition-colors"
@@ -272,7 +267,7 @@ export default function QuotationList() {
                             <Eye className="w-4 h-4" />
                           </button>
 
-                          {/* EDIT Button (Pen) */}
+                          {/* EDIT */}
                           <button
                             onClick={() => navigate(`/sales/quotations/${quote.id}/edit`)}
                             className="p-2 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-slate-400 hover:text-emerald-600 transition-colors"
@@ -281,7 +276,7 @@ export default function QuotationList() {
                             <Edit className="w-4 h-4" />
                           </button>
 
-                          {/* DOWNLOAD PDF */}
+                          {/* DOWNLOAD */}
                           <button
                             onClick={() => handleDownloadPDF(quote)}
                             className="p-2 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 text-slate-400 hover:text-purple-600 transition-colors"
@@ -290,7 +285,7 @@ export default function QuotationList() {
                             <Download className="w-4 h-4" />
                           </button>
 
-                          {/* STATUS CHANGE Menu */}
+                          {/* STATUS MENU */}
                           <div className="relative">
                             <button
                               onClick={() => setActionMenu(actionMenu === quote.id ? null : quote.id)}
@@ -303,36 +298,45 @@ export default function QuotationList() {
                             {actionMenu === quote.id && (
                               <div className="absolute right-0 top-full mt-1 w-48 neu-raised rounded-xl p-2 z-50 bg-white dark:bg-slate-800 shadow-xl">
                                 <p className="text-xs text-slate-500 px-3 py-1 mb-1">Change Status:</p>
-                                {['draft', 'sent', 'accepted', 'rejected', 'expired'].map(status => (
+                                {['draft', 'sent', 'accepted', 'rejected'].map(status => (
                                   <button
                                     key={status}
                                     onClick={() => handleStatusChange(quote.id, status)}
                                     className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors ${
                                       quote.status === status 
-                                        ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                                        ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700'
                                         : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
                                     }`}
                                   >
                                     <span className={`w-2 h-2 rounded-full ${
                                       status === 'accepted' ? 'bg-emerald-500' :
                                       status === 'sent' ? 'bg-blue-500' :
-                                      status === 'rejected' ? 'bg-red-500' :
-                                      status === 'expired' ? 'bg-amber-500' :
-                                      'bg-gray-400'
+                                      status === 'rejected' ? 'bg-red-500' : 'bg-gray-400'
                                     }`}></span>
                                     {status.replace('_', ' ')}
-                                    {quote.status === status && ' ✓'}
                                   </button>
                                 ))}
-                                <button
-                                  onClick={() => setActionMenu(null)}
-                                  className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 mt-1 border-t border-slate-200 dark:border-slate-600"
-                                >
-                                  Cancel
-                                </button>
+                                <div className="border-t border-slate-200 dark:border-slate-600 mt-1 pt-1">
+                                  <button
+                                    onClick={() => { setActionMenu(null); setDeleteConfirm(quote.id); }}
+                                    className="w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete
+                                  </button>
+                                </div>
                               </div>
                             )}
                           </div>
+
+                          {/* DELETE */}
+                          <button
+                            onClick={() => setDeleteConfirm(quote.id)}
+                            className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-slate-400 hover:text-red-600 transition-colors"
+                            title="Delete Quotation"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -344,12 +348,45 @@ export default function QuotationList() {
         </motion.div>
       </main>
 
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="neu-raised rounded-3xl p-8 max-w-md w-full bg-white dark:bg-slate-800"
+          >
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="w-8 h-8 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Delete Quotation?</h3>
+              <p className="text-slate-500 dark:text-slate-400 mb-6">
+                This action cannot be undone. All items and data for this quotation will be permanently deleted.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 neu-raised neu-btn px-6 py-3 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDelete(deleteConfirm)}
+                  className="flex-1 neu-raised neu-btn px-6 py-3 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* Close menu on outside click */}
       {actionMenu && (
-        <div 
-          className="fixed inset-0 z-40" 
-          onClick={() => setActionMenu(null)}
-        ></div>
+        <div className="fixed inset-0 z-40" onClick={() => setActionMenu(null)}></div>
       )}
     </div>
   )
