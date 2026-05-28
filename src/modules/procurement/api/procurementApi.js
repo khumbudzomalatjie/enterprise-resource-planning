@@ -1,7 +1,9 @@
 import { supabase } from '../../../lib/supabaseClient'
 
 export const procurementApi = {
-  // Vendors
+  // ============================================
+  // VENDORS - Stored in public.vendors table
+  // ============================================
   async getVendors(filters = {}) {
     let query = supabase.from('vendors').select('*').order('company_name')
     if (filters.status) query = query.eq('status', filters.status)
@@ -28,16 +30,31 @@ export const procurementApi = {
   },
 
   async updateVendor(id, updates) {
-    const { data, error } = await supabase.from('vendors').update(updates).eq('id', id).select().single()
+    const { data, error } = await supabase
+      .from('vendors')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id).select().single()
     return { data, error }
+  },
+
+  async deleteVendor(id) {
+    const { error } = await supabase
+      .from('vendors')
+      .update({ status: 'inactive', updated_at: new Date().toISOString() })
+      .eq('id', id)
+    return { error }
   },
 
   async addVendorContact(contactData) {
-    const { data, error } = await supabase.from('vendor_contacts').insert([contactData]).select().single()
+    const { data, error } = await supabase
+      .from('vendor_contacts')
+      .insert([contactData]).select().single()
     return { data, error }
   },
 
-  // Purchase Requisitions
+  // ============================================
+  // PURCHASE REQUISITIONS - Stored in public.purchase_requisitions
+  // ============================================
   async getPurchaseRequisitions(filters = {}) {
     let query = supabase.from('purchase_requisitions')
       .select('*, purchase_requisition_items(*)')
@@ -57,26 +74,63 @@ export const procurementApi = {
   },
 
   async createPurchaseRequisition(prData, items) {
+    // Insert PR header
     const { data: pr, error: prError } = await supabase
-      .from('purchase_requisitions').insert([prData]).select().single()
+      .from('purchase_requisitions')
+      .insert([prData])
+      .select().single()
+    
     if (prError) return { error: prError }
+    
+    // Insert PR line items
     if (items?.length) {
-      const itemsWithPR = items.map((item, i) => ({ ...item, pr_id: pr.id, item_number: i + 1 }))
+      const itemsWithPR = items.map((item, i) => ({
+        ...item,
+        pr_id: pr.id,
+        item_number: i + 1
+      }))
       await supabase.from('purchase_requisition_items').insert(itemsWithPR)
     }
+    
     return { data: pr }
+  },
+
+  async updatePurchaseRequisition(id, updates) {
+    const { data, error } = await supabase
+      .from('purchase_requisitions')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id).select().single()
+    return { data, error }
   },
 
   async updatePRStatus(id, status, approvedBy = null) {
     const updates = { status, updated_at: new Date().toISOString() }
-    if (status === 'approved') { updates.approved_by = approvedBy; updates.approved_at = new Date().toISOString() }
-    const { data, error } = await supabase.from('purchase_requisitions').update(updates).eq('id', id).select().single()
+    if (status === 'approved') {
+      updates.approved_by = approvedBy
+      updates.approved_at = new Date().toISOString()
+    }
+    const { data, error } = await supabase
+      .from('purchase_requisitions')
+      .update(updates)
+      .eq('id', id).select().single()
     return { data, error }
   },
 
-  // RFQs
+  async deletePurchaseRequisition(id) {
+    const { error } = await supabase
+      .from('purchase_requisitions')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', id)
+    return { error }
+  },
+
+  // ============================================
+  // RFQs - Stored in public.rfqs table
+  // ============================================
   async getRFQs(filters = {}) {
-    let query = supabase.from('rfqs').select('*, rfq_items(*), rfq_responses(*, vendors(company_name))').order('created_at', { ascending: false })
+    let query = supabase.from('rfqs')
+      .select('*, rfq_items(*), rfq_responses(*, vendors(company_name))')
+      .order('created_at', { ascending: false })
     if (filters.status) query = query.eq('status', filters.status)
     const { data, error } = await query
     return { data, error }
@@ -91,19 +145,45 @@ export const procurementApi = {
   },
 
   async createRFQ(rfqData, items) {
-    const { data: rfq, error } = await supabase.from('rfqs').insert([rfqData]).select().single()
+    const { data: rfq, error } = await supabase
+      .from('rfqs')
+      .insert([rfqData]).select().single()
     if (error) return { error }
+    
     if (items?.length) {
-      await supabase.from('rfq_items').insert(items.map((item, i) => ({ ...item, rfq_id: rfq.id, item_number: i + 1 })))
+      await supabase.from('rfq_items').insert(
+        items.map((item, i) => ({ ...item, rfq_id: rfq.id, item_number: i + 1 }))
+      )
     }
     return { data: rfq }
   },
 
+  async updateRFQ(id, updates) {
+    const { data, error } = await supabase
+      .from('rfqs')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id).select().single()
+    return { data, error }
+  },
+
+  async deleteRFQ(id) {
+    const { error } = await supabase
+      .from('rfqs')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', id)
+    return { error }
+  },
+
   async addRFQResponse(responseData, items) {
-    const { data: response, error } = await supabase.from('rfq_responses').insert([responseData]).select().single()
+    const { data: response, error } = await supabase
+      .from('rfq_responses')
+      .insert([responseData]).select().single()
     if (error) return { error }
+    
     if (items?.length) {
-      await supabase.from('rfq_response_items').insert(items.map(item => ({ ...item, response_id: response.id })))
+      await supabase.from('rfq_response_items').insert(
+        items.map(item => ({ ...item, response_id: response.id }))
+      )
     }
     return { data: response }
   },
@@ -111,12 +191,46 @@ export const procurementApi = {
   async awardRFQ(rfqId, responseId) {
     await supabase.from('rfq_responses').update({ is_selected: true }).eq('id', responseId)
     await supabase.from('rfq_responses').update({ is_selected: false }).eq('rfq_id', rfqId).neq('id', responseId)
-    const { data } = await supabase.from('rfqs').update({ status: 'awarded' }).eq('id', rfqId).select().single()
+    const { data } = await supabase.from('rfqs').update({ status: 'awarded', updated_at: new Date().toISOString() }).eq('id', rfqId).select().single()
     return { data }
   },
 
-  // Purchase Orders (Extended)
-  async createPurchaseOrderFromPR(prId) {
+  // ============================================
+  // PURCHASE ORDERS - Stored in public.purchase_orders
+  // ============================================
+  async getPurchaseOrders(filters = {}) {
+    let query = supabase.from('purchase_orders')
+      .select('*, vendors(company_name, vendor_code), purchase_order_items(*, inventory_items(name, item_code))')
+      .order('created_at', { ascending: false })
+    if (filters.status) query = query.eq('status', filters.status)
+    if (filters.supplier_id) query = query.eq('supplier_id', filters.supplier_id)
+    const { data, error } = await query
+    return { data, error }
+  },
+
+  async createPurchaseOrder(poData, items) {
+    const { data: po, error: poError } = await supabase
+      .from('purchase_orders')
+      .insert([poData]).select().single()
+    if (poError) return { error: poError }
+    
+    if (items?.length) {
+      await supabase.from('purchase_order_items').insert(
+        items.map(item => ({ ...item, purchase_order_id: po.id }))
+      )
+    }
+    return { data: po }
+  },
+
+  async updatePurchaseOrder(id, updates) {
+    const { data, error } = await supabase
+      .from('purchase_orders')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id).select().single()
+    return { data, error }
+  },
+
+  async convertPRToPO(prId) {
     const { data: pr } = await procurementApi.getPurchaseRequisition(prId)
     if (!pr) return { error: 'PR not found' }
 
@@ -135,18 +249,57 @@ export const procurementApi = {
       unit_price: item.estimated_unit_price || 0
     }))
 
-    const { data: po, error } = await supabase.from('purchase_orders').insert([poData]).select().single()
+    const { data: po, error } = await supabase
+      .from('purchase_orders')
+      .insert([poData]).select().single()
     if (error) return { error }
 
     if (items.length) {
-      await supabase.from('purchase_order_items').insert(items.map(item => ({ ...item, purchase_order_id: po.id })))
+      await supabase.from('purchase_order_items').insert(
+        items.map(item => ({ ...item, purchase_order_id: po.id }))
+      )
     }
 
     await procurementApi.updatePRStatus(prId, 'converted_to_po')
     return { data: po }
   },
 
-  // Goods Receipts
+  async receivePurchaseOrder(poId) {
+    const { data: po } = await supabase
+      .from('purchase_orders')
+      .select('*, purchase_order_items(*)')
+      .eq('id', poId).single()
+
+    if (po) {
+      // Create stock movements for each item
+      for (const item of po.purchase_order_items) {
+        await supabase.from('stock_movements').insert([{
+          item_id: item.item_id,
+          movement_type: 'purchase',
+          quantity: item.quantity_ordered,
+          unit_cost: item.unit_price,
+          reference_type: 'purchase_order',
+          reference_id: poId,
+          reference_number: po.po_number,
+          status: 'completed',
+          notes: 'Purchase order received'
+        }])
+      }
+      
+      await supabase.from('purchase_orders')
+        .update({ 
+          status: 'received', 
+          actual_delivery_date: new Date().toISOString().split('T')[0],
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', poId)
+    }
+    return { success: true }
+  },
+
+  // ============================================
+  // GOODS RECEIPTS - Stored in public.goods_receipts
+  // ============================================
   async getGoodsReceipts(filters = {}) {
     let query = supabase.from('goods_receipts')
       .select('*, purchase_orders(po_number), vendors(company_name), goods_receipt_items(*, inventory_items(name))')
@@ -158,34 +311,52 @@ export const procurementApi = {
   },
 
   async createGoodsReceipt(grData, items) {
-    const { data: gr, error } = await supabase.from('goods_receipts').insert([grData]).select().single()
+    const { data: gr, error } = await supabase
+      .from('goods_receipts')
+      .insert([grData]).select().single()
     if (error) return { error }
+    
     if (items?.length) {
-      await supabase.from('goods_receipt_items').insert(items.map(item => ({ ...item, goods_receipt_id: gr.id })))
+      await supabase.from('goods_receipt_items').insert(
+        items.map(item => ({ ...item, goods_receipt_id: gr.id }))
+      )
     }
     return { data: gr }
   },
 
-  // Vendor Evaluations
+  // ============================================
+  // VENDOR EVALUATIONS - Stored in public.vendor_evaluations
+  // ============================================
   async getVendorEvaluations(vendorId = null) {
-    let query = supabase.from('vendor_evaluations').select('*, vendors(company_name)').order('evaluation_date', { ascending: false })
+    let query = supabase.from('vendor_evaluations')
+      .select('*, vendors(company_name)')
+      .order('evaluation_date', { ascending: false })
     if (vendorId) query = query.eq('vendor_id', vendorId)
     const { data, error } = await query
     return { data, error }
   },
 
   async createVendorEvaluation(evalData) {
-    const { data, error } = await supabase.from('vendor_evaluations').insert([evalData]).select().single()
+    const { data, error } = await supabase
+      .from('vendor_evaluations')
+      .insert([evalData]).select().single()
     return { data, error }
   },
 
-  // Budgets
+  // ============================================
+  // BUDGETS - Stored in public.procurement_budgets
+  // ============================================
   async getBudgets() {
-    const { data, error } = await supabase.from('procurement_budgets').select('*').order('fiscal_year', { ascending: false })
+    const { data, error } = await supabase
+      .from('procurement_budgets')
+      .select('*')
+      .order('fiscal_year', { ascending: false })
     return { data, error }
   },
 
-  // Dashboard Stats
+  // ============================================
+  // DASHBOARD STATS
+  // ============================================
   async getProcurementStats() {
     const [
       { count: totalVendors },
