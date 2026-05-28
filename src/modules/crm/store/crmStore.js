@@ -2,7 +2,6 @@ import { create } from 'zustand'
 import { crmApi } from '../api/crmApi'
 
 const useCRMStore = create((set, get) => ({
-  // State
   clients: [],
   selectedClient: null,
   contacts: [],
@@ -16,7 +15,6 @@ const useCRMStore = create((set, get) => ({
   loading: false,
   error: null,
 
-  // Client Actions
   fetchClients: async (filters = {}) => {
     set({ loading: true, error: null })
     try {
@@ -25,7 +23,7 @@ const useCRMStore = create((set, get) => ({
       set({ clients: data || [], loading: false })
       return { success: true, data }
     } catch (error) {
-      console.error('Fetch clients error:', error)
+      console.error('fetchClients error:', error)
       set({ error: error.message, loading: false })
       return { success: false, error: error.message }
     }
@@ -39,21 +37,21 @@ const useCRMStore = create((set, get) => ({
       set({ selectedClient: data, loading: false })
       return { success: true, data }
     } catch (error) {
-      console.error('Fetch client error:', error)
       set({ error: error.message, loading: false })
       return { success: false, error: error.message }
     }
   },
 
   createClient: async (clientData) => {
+    set({ loading: true, error: null })
     try {
-      console.log('Creating client with data:', clientData) // Debug log
       const { data, error } = await crmApi.createClient(clientData)
       if (error) throw error
-      set(state => ({ clients: [data, ...(state.clients || [])] }))
+      set(state => ({ clients: [data, ...(state.clients || [])], loading: false }))
       return { success: true, data }
     } catch (error) {
-      console.error('Create client error:', error)
+      console.error('createClient error:', error)
+      set({ error: error.message, loading: false })
       return { success: false, error: error.message }
     }
   },
@@ -63,17 +61,26 @@ const useCRMStore = create((set, get) => ({
       const { data, error } = await crmApi.updateClient(id, updates)
       if (error) throw error
       set(state => ({
-        clients: state.clients.map(c => c.id === id ? data : c),
+        clients: (state.clients || []).map(c => c.id === id ? data : c),
         selectedClient: state.selectedClient?.id === id ? data : state.selectedClient
       }))
       return { success: true, data }
     } catch (error) {
-      console.error('Update client error:', error)
       return { success: false, error: error.message }
     }
   },
 
-  // Contact Actions
+  deleteClient: async (id) => {
+    try {
+      const { error } = await crmApi.deleteClient(id)
+      if (error) throw error
+      set(state => ({ clients: (state.clients || []).filter(c => c.id !== id) }))
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  },
+
   fetchContacts: async (clientId = null) => {
     try {
       const { data, error } = await crmApi.getContacts(clientId)
@@ -96,7 +103,6 @@ const useCRMStore = create((set, get) => ({
     }
   },
 
-  // Interaction Actions
   fetchInteractions: async (clientId = null) => {
     try {
       const { data, error } = await crmApi.getInteractions(clientId)
@@ -119,7 +125,6 @@ const useCRMStore = create((set, get) => ({
     }
   },
 
-  // Service Actions
   fetchServiceTypes: async () => {
     try {
       const { data, error } = await crmApi.getServiceTypes()
@@ -153,7 +158,6 @@ const useCRMStore = create((set, get) => ({
     }
   },
 
-  // Pipeline Actions
   fetchPipeline: async (filters = {}) => {
     try {
       const { data, error } = await crmApi.getPipeline(filters)
@@ -180,23 +184,20 @@ const useCRMStore = create((set, get) => ({
     try {
       const { data, error } = await crmApi.updatePipelineItem(id, updates)
       if (error) throw error
-      set(state => ({
-        pipeline: state.pipeline.map(p => p.id === id ? data : p)
-      }))
+      set(state => ({ pipeline: (state.pipeline || []).map(p => p.id === id ? data : p) }))
       return { success: true, data }
     } catch (error) {
       return { success: false, error: error.message }
     }
   },
 
-  // Stats
   fetchCRMStats: async () => {
     try {
       const stats = await crmApi.getCRMStats()
       set({ stats })
       return stats
     } catch (error) {
-      console.error('Fetch stats error:', error)
+      console.error('fetchCRMStats error:', error)
       return {}
     }
   },
