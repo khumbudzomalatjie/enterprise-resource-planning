@@ -98,6 +98,18 @@ export default function AppRoutes() {
           </ProtectedRoute>
         } 
       />
+
+      {/* ============================================ */}
+      {/* MODULE 7 - INVENTORY MANAGEMENT              */}
+      {/* ============================================ */}
+      <Route 
+        path="/inventory/*" 
+        element={
+          <ProtectedRoute>
+            <InventoryRoutes />
+          </ProtectedRoute>
+        } 
+      />
       
       {/* ============================================ */}
       {/* ADMIN ROUTES - Super Admin Only              */}
