@@ -82,6 +82,13 @@ const useInventoryStore = create((set, get) => ({
     return { success: true, data }
   },
 
+  createSupplier: async (supplierData) => {
+    const { data, error } = await inventoryApi.createSupplier(supplierData)
+    if (error) return { success: false, error: error.message }
+    set(state => ({ suppliers: [data, ...state.suppliers] }))
+    return { success: true, data }
+  },
+
   fetchBatches: async (itemId = null) => {
     const { data, error } = await inventoryApi.getBatches(itemId)
     if (error) return { success: false }
