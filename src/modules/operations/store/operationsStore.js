@@ -16,57 +16,112 @@ const useOperationsStore = create((set, get) => ({
   fetchJobs: async (filters = {}) => {
     set({ loading: true, error: null })
     const { data, error } = await operationsApi.getJobs(filters)
-    if (error) { set({ error: error.message, loading: false }); return { success: false, error: error.message } }
-    set({ jobs: data, loading: false })
-    return { success: true, data }
+    if (error) { 
+      console.error('fetchJobs error:', error)
+      set({ error: error.message, loading: false })
+      return { success: false, error: error.message }
+    }
+    set({ jobs: data || [], loading: false })
+    return { success: true, data: data || [] }
   },
 
   fetchJob: async (id) => {
-    set({ loading: true })
+    set({ loading: true, error: null })
+    console.log('fetchJob called with id:', id)
     const { data, error } = await operationsApi.getJob(id)
-    if (error) { set({ error: error.message, loading: false }); return { success: false } }
+    if (error) { 
+      console.error('fetchJob error:', error)
+      set({ error: error.message, loading: false })
+      return { success: false, error: error.message }
+    }
+    if (!data) {
+      console.error('fetchJob: No data returned for id:', id)
+      set({ error: 'Job not found', loading: false })
+      return { success: false, error: 'Job not found' }
+    }
+    console.log('fetchJob success:', data)
     set({ selectedJob: data, loading: false })
     return { success: true, data }
   },
 
   createJob: async (jobData) => {
+    set({ loading: true, error: null })
     const { data, error } = await operationsApi.createJob(jobData)
-    if (error) return { success: false, error: error.message }
-    set(state => ({ jobs: [data, ...state.jobs] }))
+    if (error) {
+      console.error('createJob error:', error)
+      set({ loading: false })
+      return { success: false, error: error.message }
+    }
+    set(state => ({ jobs: [data, ...state.jobs], loading: false }))
     return { success: true, data }
   },
 
   updateJob: async (id, updates) => {
+    set({ loading: true, error: null })
     const { data, error } = await operationsApi.updateJob(id, updates)
-    if (error) return { success: false, error: error.message }
+    if (error) {
+      console.error('updateJob error:', error)
+      set({ loading: false })
+      return { success: false, error: error.message }
+    }
     set(state => ({
       jobs: state.jobs.map(j => j.id === id ? data : j),
-      selectedJob: state.selectedJob?.id === id ? data : state.selectedJob
+      selectedJob: state.selectedJob?.id === id ? data : state.selectedJob,
+      loading: false
     }))
     return { success: true, data }
   },
 
   updateJobStatus: async (id, status) => {
+    set({ loading: true, error: null })
     const { data, error } = await operationsApi.updateJobStatus(id, status)
-    if (error) return { success: false, error: error.message }
+    if (error) {
+      console.error('updateJobStatus error:', error)
+      set({ loading: false })
+      return { success: false, error: error.message }
+    }
     set(state => ({
-      jobs: state.jobs.map(j => j.id === id ? data : j)
+      jobs: state.jobs.map(j => j.id === id ? data : j),
+      selectedJob: state.selectedJob?.id === id ? data : state.selectedJob,
+      loading: false
     }))
     return { success: true, data }
   },
 
+  deleteJob: async (id) => {
+    set({ loading: true, error: null })
+    const { error } = await operationsApi.deleteJob(id)
+    if (error) {
+      console.error('deleteJob error:', error)
+      set({ loading: false })
+      return { success: false, error: error.message }
+    }
+    set(state => ({
+      jobs: state.jobs.filter(j => j.id !== id),
+      selectedJob: state.selectedJob?.id === id ? null : state.selectedJob,
+      loading: false
+    }))
+    return { success: true }
+  },
+
   fetchJobCategories: async () => {
     const { data, error } = await operationsApi.getJobCategories()
-    if (error) return { success: false }
-    set({ jobCategories: data })
-    return { success: true, data }
+    if (error) {
+      console.error('fetchJobCategories error:', error)
+      return { success: false, error: error.message }
+    }
+    set({ jobCategories: data || [] })
+    return { success: true, data: data || [] }
   },
 
   fetchTeams: async () => {
     const { data, error } = await operationsApi.getTeams()
-    if (error) return { success: false }
-    set({ teams: data })
-    return { success: true, data }
+    if (error) {
+      console.error('fetchTeams error:', error)
+      return { success: false }
+    }
+    set({ teams: data || [] })
+    return { success: true, data: data || [] }
   },
 
   createTeam: async (teamData) => {
@@ -84,9 +139,12 @@ const useOperationsStore = create((set, get) => ({
 
   fetchRoutes: async (filters = {}) => {
     const { data, error } = await operationsApi.getRoutes(filters)
-    if (error) return { success: false }
-    set({ routes: data })
-    return { success: true, data }
+    if (error) {
+      console.error('fetchRoutes error:', error)
+      return { success: false }
+    }
+    set({ routes: data || [] })
+    return { success: true, data: data || [] }
   },
 
   createRoute: async (routeData, stops) => {
@@ -97,9 +155,12 @@ const useOperationsStore = create((set, get) => ({
 
   fetchQualityInspections: async (jobId = null) => {
     const { data, error } = await operationsApi.getQualityInspections(jobId)
-    if (error) return { success: false }
-    set({ qualityInspections: data })
-    return { success: true, data }
+    if (error) {
+      console.error('fetchQualityInspections error:', error)
+      return { success: false }
+    }
+    set({ qualityInspections: data || [] })
+    return { success: true, data: data || [] }
   },
 
   createQualityInspection: async (inspectionData) => {
@@ -111,9 +172,12 @@ const useOperationsStore = create((set, get) => ({
 
   fetchSupplies: async () => {
     const { data, error } = await operationsApi.getEquipmentSupplies()
-    if (error) return { success: false }
-    set({ supplies: data })
-    return { success: true, data }
+    if (error) {
+      console.error('fetchSupplies error:', error)
+      return { success: false }
+    }
+    set({ supplies: data || [] })
+    return { success: true, data: data || [] }
   },
 
   fetchOperationsStats: async () => {
