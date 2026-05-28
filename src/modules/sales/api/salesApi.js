@@ -5,7 +5,7 @@ export const salesApi = {
   // QUOTATIONS
   // ============================================
   async getQuotations(filters = {}) {
-    let query = supabase
+    var query = supabase
       .from('quotations')
       .select('*')
       .order('created_at', { ascending: false })
@@ -16,41 +16,40 @@ export const salesApi = {
       query = query.or('quotation_number.ilike.%' + filters.search + '%,client_name.ilike.%' + filters.search + '%')
     }
 
-    const { data, error } = await query
-    return { data: data || [], error }
+    var result = await query
+    return { data: result.data || [], error: result.error }
   },
 
   async getQuotation(id) {
-    const { data, error } = await supabase
+    var result = await supabase
       .from('quotations')
       .select('*, quotation_items(*)')
       .eq('id', id)
       .single()
-    return { data, error }
+    return { data: result.data, error: result.error }
   },
 
   async createQuotation(quotationData, items) {
-    // Generate quotation number manually
-    const { data: existingQuotes } = await supabase
+    // Generate quotation number
+    var existingResult = await supabase
       .from('quotations')
       .select('quotation_number')
       .order('created_at', { ascending: false })
       .limit(1)
 
-    let nextNum = 1
-    if (existingQuotes && existingQuotes.length > 0) {
-      const lastQuote = existingQuotes[0].quotation_number || ''
-      const parts = lastQuote.split('-')
+    var nextNum = 1
+    if (existingResult.data && existingResult.data.length > 0) {
+      var lastQuote = existingResult.data[0].quotation_number || ''
+      var parts = lastQuote.split('-')
       if (parts.length > 2) {
         nextNum = parseInt(parts[parts.length - 1]) + 1 || 1
       }
     }
 
-    const yearSuffix = new Date().getFullYear().toString().slice(-2)
-    const quotationNumber = 'Q-' + yearSuffix + '-' + String(nextNum).padStart(4, '0')
+    var yearSuffix = new Date().getFullYear().toString().slice(-2)
+    var quotationNumber = 'Q-' + yearSuffix + '-' + String(nextNum).padStart(4, '0')
 
-    // Clean data
-    const cleanData = {
+    var cleanData = {
       quotation_number: quotationNumber,
       client_id: quotationData.client_id || null,
       client_name: quotationData.client_name || null,
@@ -73,24 +72,21 @@ export const salesApi = {
       prepared_by: quotationData.prepared_by || null
     }
 
-    // Remove empty UUID fields
     if (!cleanData.client_id) delete cleanData.client_id
     if (!cleanData.prepared_by) delete cleanData.prepared_by
 
-    // Insert quotation
-    const { data: quotation, error: qError } = await supabase
+    var quoteResult = await supabase
       .from('quotations')
       .insert([cleanData])
       .select('*')
       .single()
 
-    if (qError) return { error: qError }
+    if (quoteResult.error) return { error: quoteResult.error }
 
-    // Insert items
     if (items && items.length > 0) {
-      const itemsWithQuotationId = items.map(function(item, index) {
+      var itemsData = items.map(function(item, index) {
         return {
-          quotation_id: quotation.id,
+          quotation_id: quoteResult.data.id,
           item_number: index + 1,
           description: item.description || '',
           quantity: item.quantity || 1,
@@ -101,56 +97,80 @@ export const salesApi = {
         }
       })
 
-      const { error: iError } = await supabase
-        .from('quotation_items')
-        .insert(itemsWithQuotationId)
-
-      if (iError) return { error: iError }
+      await supabase.from('quotation_items').insert(itemsData)
     }
 
-    return await salesApi.getQuotation(quotation.id)
+    return await salesApi.getQuotation(quoteResult.data.id)
   },
 
   async updateQuotation(id, updates) {
-    const cleanUpdates = { ...updates }
+    var cleanUpdates = { ...updates }
     if (cleanUpdates.quotation_date === '') delete cleanUpdates.quotation_date
     if (cleanUpdates.valid_until === '') delete cleanUpdates.valid_until
     if (cleanUpdates.prepared_by === '') delete cleanUpdates.prepared_by
     if (cleanUpdates.client_id === '') delete cleanUpdates.client_id
 
-    const { data, error } = await supabase
+    var result = await supabase
       .from('quotations')
       .update({ ...cleanUpdates, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select('*')
       .single()
-    return { data, error }
+    return { data: result.data, error: result.error }
   },
 
-  async convertQuotationToInvoice(quotationId) {
-    const { data: quotation, error: fetchError } = await salesApi.getQuotation(quotationId)
-    if (fetchError || !quotation) return { error: fetchError || 'Quotation not found' }
+  // Convert quotation to JOB (creates a job in operations)
+  async convertQuotationToJob(quotationId) {
+    console.log('Converting quotation to job:', quotationId)
+    
+    // Call the database function
+    var result = await supabase
+      .rpc('convert_quotation_to_job', { p_quotation_id: quotationId })
 
-    // Generate invoice number
-    const yearSuffix = new Date().getFullYear().toString().slice(-2)
-    const { data: existingInvoices } = await supabase
+    if (result.error) {
+      console.error('convertQuotationToJob error:', result.error)
+      return { data: null, error: result.error }
+    }
+
+    // Fetch the created job
+    if (result.data) {
+      var jobResult = await supabase
+        .from('jobs')
+        .select('*')
+        .eq('id', result.data)
+        .single()
+      
+      return { data: jobResult.data, error: null }
+    }
+
+    return { data: null, error: { message: 'Failed to create job' } }
+  },
+
+  // Convert quotation to INVOICE
+  async convertQuotationToInvoice(quotationId) {
+    var quoteResult = await salesApi.getQuotation(quotationId)
+    if (quoteResult.error || !quoteResult.data) return { error: quoteResult.error || 'Quotation not found' }
+
+    var quotation = quoteResult.data
+    var yearSuffix = new Date().getFullYear().toString().slice(-2)
+    
+    var existingInvResult = await supabase
       .from('invoices')
       .select('invoice_number')
       .order('created_at', { ascending: false })
       .limit(1)
 
-    let nextInvNum = 1
-    if (existingInvoices && existingInvoices.length > 0) {
-      const lastInv = existingInvoices[0].invoice_number || ''
-      const parts = lastInv.split('-')
-      if (parts.length > 2) {
-        nextInvNum = parseInt(parts[parts.length - 1]) + 1 || 1
+    var nextInvNum = 1
+    if (existingInvResult.data && existingInvResult.data.length > 0) {
+      var lastInv = existingInvResult.data[0].invoice_number || ''
+      var invParts = lastInv.split('-')
+      if (invParts.length > 2) {
+        nextInvNum = parseInt(invParts[invParts.length - 1]) + 1 || 1
       }
     }
-    const invoiceNumber = 'INV-' + yearSuffix + '-' + String(nextInvNum).padStart(4, '0')
+    var invoiceNumber = 'INV-' + yearSuffix + '-' + String(nextInvNum).padStart(4, '0')
 
-    // Create invoice
-    const { data: invoice, error: invError } = await supabase
+    var invResult = await supabase
       .from('invoices')
       .insert([{
         invoice_number: invoiceNumber,
@@ -172,13 +192,12 @@ export const salesApi = {
       .select('*')
       .single()
 
-    if (invError) return { error: invError }
+    if (invResult.error) return { error: invResult.error }
 
-    // Copy quotation items to invoice items
     if (quotation.quotation_items && quotation.quotation_items.length > 0) {
-      const invoiceItems = quotation.quotation_items.map(function(item, index) {
+      var invoiceItems = quotation.quotation_items.map(function(item, index) {
         return {
-          invoice_id: invoice.id,
+          invoice_id: invResult.data.id,
           item_number: index + 1,
           description: item.description,
           quantity: item.quantity,
@@ -188,29 +207,27 @@ export const salesApi = {
           tax_percent: item.tax_percent || 15
         }
       })
-
       await supabase.from('invoice_items').insert(invoiceItems)
     }
 
-    // Update quotation status
     await supabase
       .from('quotations')
       .update({
         status: 'converted',
         converted_to_invoice: true,
-        invoice_id: invoice.id,
+        invoice_id: invResult.data.id,
         updated_at: new Date().toISOString()
       })
       .eq('id', quotationId)
 
-    return { data: invoice }
+    return { data: invResult.data }
   },
 
   // ============================================
   // INVOICES
   // ============================================
   async getInvoices(filters = {}) {
-    let query = supabase
+    var query = supabase
       .from('invoices')
       .select('*')
       .order('created_at', { ascending: false })
@@ -218,64 +235,45 @@ export const salesApi = {
     if (filters.status && filters.status !== 'all') query = query.eq('status', filters.status)
     if (filters.client_id) query = query.eq('client_id', filters.client_id)
 
-    const { data, error } = await query
-    return { data: data || [], error }
+    var result = await query
+    return { data: result.data || [], error: result.error }
   },
 
   async getInvoice(id) {
-    const { data, error } = await supabase
+    var result = await supabase
       .from('invoices')
       .select('*, invoice_items(*), payments(*)')
       .eq('id', id)
       .single()
-    return { data, error }
+    return { data: result.data, error: result.error }
   },
 
   async recordPayment(paymentData) {
-    const cleanData = { ...paymentData }
+    var cleanData = { ...paymentData }
     if (!cleanData.invoice_id || cleanData.invoice_id === '') delete cleanData.invoice_id
     if (!cleanData.client_id || cleanData.client_id === '') delete cleanData.client_id
     if (!cleanData.recorded_by || cleanData.recorded_by === '') delete cleanData.recorded_by
     if (cleanData.amount !== undefined) cleanData.amount = Number(cleanData.amount)
 
-    const { data, error } = await supabase
+    var result = await supabase
       .from('payments')
       .insert([cleanData])
       .select('*')
       .single()
 
-    if (!error && paymentData.invoice_id) {
-      const { data: invoice } = await salesApi.getInvoice(paymentData.invoice_id)
-      if (invoice) {
-        const totalPaid = (invoice.payments || []).reduce(function(sum, p) {
-          return sum + (p.amount || 0)
-        }, 0)
-        const newStatus = totalPaid >= (invoice.total_amount || 0) ? 'paid' : 'partially_paid'
-
-        await supabase
-          .from('invoices')
-          .update({
-            amount_paid: totalPaid,
-            status: newStatus,
-            last_payment_date: paymentData.payment_date || new Date().toISOString().split('T')[0]
-          })
-          .eq('id', paymentData.invoice_id)
-      }
-    }
-
-    return { data, error }
+    return { data: result.data, error: result.error }
   },
 
   // ============================================
   // PRODUCTS/SERVICES
   // ============================================
   async getProductsServices() {
-    const { data, error } = await supabase
+    var result = await supabase
       .from('products_services')
       .select('*')
       .eq('is_active', true)
       .order('category')
-    return { data: data || [], error }
+    return { data: result.data || [], error: result.error }
   },
 
   // ============================================
@@ -283,37 +281,30 @@ export const salesApi = {
   // ============================================
   async getSalesStats() {
     try {
-      const currentMonth = new Date().toISOString().slice(0, 7)
+      var currentMonth = new Date().toISOString().slice(0, 7)
 
-      const { count: totalQuotations } = await supabase.from('quotations').select('*', { count: 'exact', head: true })
-      const { count: pendingQuotations } = await supabase.from('quotations').select('*', { count: 'exact', head: true }).eq('status', 'sent')
-      const { count: totalInvoices } = await supabase.from('invoices').select('*', { count: 'exact', head: true })
-      const { count: unpaidInvoices } = await supabase.from('invoices').select('*', { count: 'exact', head: true }).in('status', ['sent', 'overdue', 'partially_paid'])
-      const { data: monthlyInvoices } = await supabase.from('invoices').select('total_amount').gte('invoice_date', currentMonth + '-01')
-      const { data: recentQuotations } = await supabase.from('quotations').select('*').order('created_at', { ascending: false }).limit(5)
+      var totalQResult = await supabase.from('quotations').select('*', { count: 'exact', head: true })
+      var pendingQResult = await supabase.from('quotations').select('*', { count: 'exact', head: true }).eq('status', 'sent')
+      var totalInvResult = await supabase.from('invoices').select('*', { count: 'exact', head: true })
+      var unpaidInvResult = await supabase.from('invoices').select('*', { count: 'exact', head: true }).in('status', ['sent', 'overdue', 'partially_paid'])
+      var monthlyResult = await supabase.from('invoices').select('total_amount').gte('invoice_date', currentMonth + '-01')
+      var recentQResult = await supabase.from('quotations').select('*').order('created_at', { ascending: false }).limit(5)
 
-      const monthlyTotal = (monthlyInvoices || []).reduce(function(sum, inv) {
+      var monthlyTotal = (monthlyResult.data || []).reduce(function(sum, inv) {
         return sum + (inv.total_amount || 0)
       }, 0)
 
       return {
-        totalQuotations: totalQuotations || 0,
-        pendingQuotations: pendingQuotations || 0,
-        totalInvoices: totalInvoices || 0,
-        unpaidInvoices: unpaidInvoices || 0,
+        totalQuotations: totalQResult.count || 0,
+        pendingQuotations: pendingQResult.count || 0,
+        totalInvoices: totalInvResult.count || 0,
+        unpaidInvoices: unpaidInvResult.count || 0,
         monthlyTotal: monthlyTotal,
-        recentQuotations: recentQuotations || []
+        recentQuotations: recentQResult.data || []
       }
     } catch (error) {
       console.error('getSalesStats error:', error)
-      return {
-        totalQuotations: 0,
-        pendingQuotations: 0,
-        totalInvoices: 0,
-        unpaidInvoices: 0,
-        monthlyTotal: 0,
-        recentQuotations: []
-      }
+      return { totalQuotations: 0, pendingQuotations: 0, totalInvoices: 0, unpaidInvoices: 0, monthlyTotal: 0, recentQuotations: [] }
     }
   }
 }
