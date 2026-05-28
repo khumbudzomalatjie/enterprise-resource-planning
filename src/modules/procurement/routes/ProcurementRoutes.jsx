@@ -4,12 +4,14 @@ import RoleBasedRoute from '../../../components/RoleBasedRoute'
 import ProcurementDashboard from '../pages/ProcurementDashboard'
 import PurchaseRequests from '../pages/PurchaseRequests'
 import CreatePurchaseRequest from '../pages/CreatePurchaseRequest'
+import PRDetail from '../pages/PRDetail'
 import PurchaseOrders from '../pages/PurchaseOrders'
 import CreatePurchaseOrder from '../pages/CreatePurchaseOrder'
 import RFQManagement from '../pages/RFQManagement'
 import CreateRFQ from '../pages/CreateRFQ'
 import VendorManagement from '../pages/VendorManagement'
 import CreateVendor from '../pages/CreateVendor'
+import VendorDetail from '../pages/VendorDetail'
 import GoodsReceipts from '../pages/GoodsReceipts'
 import CreateGoodsReceipt from '../pages/CreateGoodsReceipt'
 import { USER_ROLES } from '../../../types/authTypes'
@@ -40,6 +42,7 @@ export default function ProcurementRoutes() {
       {/* ============================================ */}
       {/* PURCHASE REQUISITIONS (PR)                   */}
       {/* ============================================ */}
+      {/* List all PRs */}
       <Route 
         path="/pr" 
         element={
@@ -50,6 +53,7 @@ export default function ProcurementRoutes() {
           </ProtectedRoute>
         } 
       />
+      {/* Create new PR */}
       <Route 
         path="/pr/new" 
         element={
@@ -60,12 +64,13 @@ export default function ProcurementRoutes() {
           </ProtectedRoute>
         } 
       />
+      {/* View/Edit PR Detail */}
       <Route 
         path="/pr/:id" 
         element={
           <ProtectedRoute>
             <RoleBasedRoute requiredRoles={allowedRoles}>
-              <CreatePurchaseRequest />
+              <PRDetail />
             </RoleBasedRoute>
           </ProtectedRoute>
         } 
@@ -74,6 +79,7 @@ export default function ProcurementRoutes() {
       {/* ============================================ */}
       {/* PURCHASE ORDERS (PO)                         */}
       {/* ============================================ */}
+      {/* List all POs */}
       <Route 
         path="/po" 
         element={
@@ -84,6 +90,7 @@ export default function ProcurementRoutes() {
           </ProtectedRoute>
         } 
       />
+      {/* Create new PO */}
       <Route 
         path="/po/new" 
         element={
@@ -94,12 +101,13 @@ export default function ProcurementRoutes() {
           </ProtectedRoute>
         } 
       />
+      {/* View PO Detail */}
       <Route 
         path="/po/:id" 
         element={
           <ProtectedRoute>
             <RoleBasedRoute requiredRoles={allowedRoles}>
-              <CreatePurchaseOrder />
+              <PRDetail />
             </RoleBasedRoute>
           </ProtectedRoute>
         } 
@@ -108,6 +116,7 @@ export default function ProcurementRoutes() {
       {/* ============================================ */}
       {/* REQUEST FOR QUOTATIONS (RFQ)                 */}
       {/* ============================================ */}
+      {/* List all RFQs */}
       <Route 
         path="/rfq" 
         element={
@@ -118,6 +127,7 @@ export default function ProcurementRoutes() {
           </ProtectedRoute>
         } 
       />
+      {/* Create new RFQ */}
       <Route 
         path="/rfq/new" 
         element={
@@ -128,12 +138,13 @@ export default function ProcurementRoutes() {
           </ProtectedRoute>
         } 
       />
+      {/* View RFQ Detail */}
       <Route 
         path="/rfq/:id" 
         element={
           <ProtectedRoute>
             <RoleBasedRoute requiredRoles={allowedRoles}>
-              <CreateRFQ />
+              <PRDetail />
             </RoleBasedRoute>
           </ProtectedRoute>
         } 
@@ -142,6 +153,7 @@ export default function ProcurementRoutes() {
       {/* ============================================ */}
       {/* VENDOR MANAGEMENT                            */}
       {/* ============================================ */}
+      {/* List all vendors */}
       <Route 
         path="/vendors" 
         element={
@@ -152,6 +164,7 @@ export default function ProcurementRoutes() {
           </ProtectedRoute>
         } 
       />
+      {/* Create new vendor */}
       <Route 
         path="/vendors/new" 
         element={
@@ -162,22 +175,13 @@ export default function ProcurementRoutes() {
           </ProtectedRoute>
         } 
       />
+      {/* View/Edit vendor detail */}
       <Route 
         path="/vendors/:id" 
         element={
           <ProtectedRoute>
             <RoleBasedRoute requiredRoles={allowedRoles}>
-              <CreateVendor />
-            </RoleBasedRoute>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/vendors/:id/edit" 
-        element={
-          <ProtectedRoute>
-            <RoleBasedRoute requiredRoles={allowedRoles}>
-              <CreateVendor />
+              <VendorDetail />
             </RoleBasedRoute>
           </ProtectedRoute>
         } 
@@ -186,6 +190,7 @@ export default function ProcurementRoutes() {
       {/* ============================================ */}
       {/* GOODS RECEIPTS                               */}
       {/* ============================================ */}
+      {/* List all receipts */}
       <Route 
         path="/receipts" 
         element={
@@ -196,6 +201,7 @@ export default function ProcurementRoutes() {
           </ProtectedRoute>
         } 
       />
+      {/* Create new receipt */}
       <Route 
         path="/receipts/new" 
         element={
@@ -206,12 +212,13 @@ export default function ProcurementRoutes() {
           </ProtectedRoute>
         } 
       />
+      {/* View receipt detail */}
       <Route 
         path="/receipts/:id" 
         element={
           <ProtectedRoute>
             <RoleBasedRoute requiredRoles={allowedRoles}>
-              <CreateGoodsReceipt />
+              <PRDetail />
             </RoleBasedRoute>
           </ProtectedRoute>
         } 
