@@ -38,20 +38,65 @@ const useAuthStore = create((set, get) => ({
 
   fetchProfile: async (userId) => {
     try {
-      const { data, error } = await supabase
+      console.log('Fetching profile for user:', userId)
+      
+      // First try to get existing profile
+      let { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single()
 
-      if (error) {
+      // If profile doesn't exist, create one
+      if (error && error.code === 'PGRST116') {
+        console.log('Profile not found, creating new profile...')
+        const user = get().user
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert([{
+            id: userId,
+            email: user?.email || '',
+            full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User',
+            role: user?.user_metadata?.role || 'customer',
+            is_active: true
+          }])
+          .select()
+          .single()
+
+        if (createError) {
+          console.error('Error creating profile:', createError)
+          // Set a default profile so the app doesn't break
+          set({ 
+            profile: {
+              id: userId,
+              email: user?.email || '',
+              full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User',
+              role: user?.user_metadata?.role || 'customer'
+            }
+          })
+          return
+        }
+        
+        data = newProfile
+      } else if (error) {
         console.error('Error fetching profile:', error)
+        // Set a basic profile from user metadata
+        const user = get().user
+        set({ 
+          profile: {
+            id: userId,
+            email: user?.email || '',
+            full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User',
+            role: user?.user_metadata?.role || 'customer'
+          }
+        })
         return
       }
       
+      console.log('Profile loaded:', data)
       set({ profile: data })
     } catch (error) {
-      console.error('Error fetching profile:', error)
+      console.error('Error in fetchProfile:', error)
     }
   },
 
