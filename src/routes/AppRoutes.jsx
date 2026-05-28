@@ -7,12 +7,16 @@ import ResetPassword from '../pages/ResetPassword'
 import Dashboard from '../pages/Dashboard'
 import UserManagement from '../pages/UserManagement'
 import Unauthorized from '../pages/Unauthorized'
+
+// Module Routes
 import HRRoutes from '../modules/hr/routes/HRRoutes'
 import PayrollRoutes from '../modules/payroll/routes/PayrollRoutes'
 import CRMRoutes from '../modules/crm/routes/CRMRoutes'
 import SalesRoutes from '../modules/sales/routes/SalesRoutes'
 import OperationsRoutes from '../modules/operations/routes/OperationsRoutes'
 import InventoryRoutes from '../modules/inventory/routes/InventoryRoutes'
+import ProcurementRoutes from '../modules/procurement/routes/ProcurementRoutes'
+
 import { USER_ROLES } from '../types/authTypes'
 
 export default function AppRoutes() {
@@ -40,7 +44,13 @@ export default function AppRoutes() {
       />
       
       {/* ============================================ */}
+      {/* MODULE 0 - AUTHENTICATION & ACCESS CONTROL   */}
+      {/* (Handled by Supabase Auth + ProtectedRoute)  */}
+      {/* ============================================ */}
+      
+      {/* ============================================ */}
       {/* MODULE 1 - HR MANAGEMENT                     */}
+      {/* Access: Super Admin, HR Manager, Ops Manager */}
       {/* ============================================ */}
       <Route 
         path="/hr/*" 
@@ -53,6 +63,7 @@ export default function AppRoutes() {
       
       {/* ============================================ */}
       {/* MODULE 2 - PAYROLL MANAGEMENT                */}
+      {/* Access: Super Admin, Finance Officer, HR Mgr */}
       {/* ============================================ */}
       <Route 
         path="/payroll/*" 
@@ -64,7 +75,13 @@ export default function AppRoutes() {
       />
       
       {/* ============================================ */}
+      {/* MODULE 3 - ATTENDANCE TRACKING               */}
+      {/* (Integrated under HR Module /hr/attendance)  */}
+      {/* ============================================ */}
+      
+      {/* ============================================ */}
       {/* MODULE 4 - CRM & CLIENT MANAGEMENT           */}
+      {/* Access: Super Admin, Ops Manager, Sales Agent*/}
       {/* ============================================ */}
       <Route 
         path="/crm/*" 
@@ -77,6 +94,7 @@ export default function AppRoutes() {
       
       {/* ============================================ */}
       {/* MODULE 5 - SALES & QUOTATIONS                */}
+      {/* Access: Super Admin, Ops Mgr, Sales, Finance */}
       {/* ============================================ */}
       <Route 
         path="/sales/*" 
@@ -89,6 +107,7 @@ export default function AppRoutes() {
       
       {/* ============================================ */}
       {/* MODULE 6 - OPERATIONS & SCHEDULING           */}
+      {/* Access: Super Admin, Ops Manager, Supervisor */}
       {/* ============================================ */}
       <Route 
         path="/operations/*" 
@@ -101,6 +120,7 @@ export default function AppRoutes() {
 
       {/* ============================================ */}
       {/* MODULE 7 - INVENTORY MANAGEMENT              */}
+      {/* Access: Super Admin, Ops Manager, Supervisor */}
       {/* ============================================ */}
       <Route 
         path="/inventory/*" 
@@ -110,6 +130,64 @@ export default function AppRoutes() {
           </ProtectedRoute>
         } 
       />
+
+      {/* ============================================ */}
+      {/* MODULE 8 - PROCUREMENT MANAGEMENT            */}
+      {/* Access: Super Admin, Ops Manager, Finance    */}
+      {/* ============================================ */}
+      <Route 
+        path="/procurement/*" 
+        element={
+          <ProtectedRoute>
+            <ProcurementRoutes />
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* ============================================ */}
+      {/* MODULE 9 - FINANCE & ACCOUNTING              */}
+      {/* (Coming Soon)                                */}
+      {/* ============================================ */}
+      
+      {/* ============================================ */}
+      {/* MODULE 10 - FLEET MANAGEMENT                 */}
+      {/* (Coming Soon)                                */}
+      {/* ============================================ */}
+      
+      {/* ============================================ */}
+      {/* MODULE 11 - QUALITY CONTROL                  */}
+      {/* (Coming Soon)                                */}
+      {/* ============================================ */}
+      
+      {/* ============================================ */}
+      {/* MODULE 12 - REPORTING & ANALYTICS            */}
+      {/* (Coming Soon)                                */}
+      {/* ============================================ */}
+      
+      {/* ============================================ */}
+      {/* MODULE 13 - CUSTOMER PORTAL                  */}
+      {/* (Coming Soon)                                */}
+      {/* ============================================ */}
+      
+      {/* ============================================ */}
+      {/* MODULE 14 - MOBILE WORKFORCE                 */}
+      {/* (Coming Soon)                                */}
+      {/* ============================================ */}
+      
+      {/* ============================================ */}
+      {/* MODULE 15 - NOTIFICATIONS & COMMUNICATION    */}
+      {/* (Coming Soon)                                */}
+      {/* ============================================ */}
+      
+      {/* ============================================ */}
+      {/* MODULE 16 - WORKFLOW AUTOMATION              */}
+      {/* (Coming Soon)                                */}
+      {/* ============================================ */}
+      
+      {/* ============================================ */}
+      {/* MODULE 17 - DOCUMENT MANAGEMENT              */}
+      {/* (Coming Soon)                                */}
+      {/* ============================================ */}
       
       {/* ============================================ */}
       {/* ADMIN ROUTES - Super Admin Only              */}
