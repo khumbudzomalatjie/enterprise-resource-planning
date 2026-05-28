@@ -6,9 +6,9 @@ import useOperationsStore from '../store/operationsStore'
 import useThemeStore from '../../../store/themeStore'
 import toast from 'react-hot-toast'
 import { 
-  Search, Filter, Plus, Eye, Pencil, Trash2, MapPin,
+  Search, Plus, Eye, Pencil, Trash2,
   Calendar, Clock, Briefcase, ChevronRight,
-  Sun, Moon, Sparkles, AlertTriangle
+  Sun, Moon, Sparkles, AlertTriangle, RefreshCw
 } from 'lucide-react'
 
 export default function JobList() {
@@ -19,20 +19,22 @@ export default function JobList() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
-  const [priorityFilter, setPriorityFilter] = useState('all')
   const [deleteConfirm, setDeleteConfirm] = useState(null)
 
   useEffect(() => {
     loadData()
-  }, [statusFilter, categoryFilter, priorityFilter])
+  }, [statusFilter, categoryFilter])
 
   const loadData = async () => {
     const filters = {}
     if (statusFilter !== 'all') filters.status = statusFilter
     if (categoryFilter !== 'all') filters.category_id = categoryFilter
-    if (priorityFilter !== 'all') filters.priority = priorityFilter
     if (search) filters.search = search
-    await fetchJobs(filters)
+    
+    console.log('Loading jobs with filters:', filters)
+    const result = await fetchJobs(filters)
+    console.log('Jobs loaded:', result)
+    
     await fetchJobCategories()
   }
 
@@ -46,9 +48,17 @@ export default function JobList() {
     if (result.success) {
       toast.success('Job cancelled successfully')
       setDeleteConfirm(null)
+      loadData()
     } else {
       toast.error('Failed to cancel job')
     }
+  }
+
+  const handleRefresh = () => {
+    setSearch('')
+    setStatusFilter('all')
+    setCategoryFilter('all')
+    loadData()
   }
 
   const getStatusColor = (status) => {
@@ -59,26 +69,13 @@ export default function JobList() {
       completed: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
       cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
       overdue: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-      on_hold: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-      rescheduled: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
     }
     return colors[status] || 'bg-slate-100 text-slate-700'
   }
 
-  const getPriorityColor = (priority) => {
-    const colors = {
-      low: 'text-slate-500',
-      medium: 'text-blue-600',
-      high: 'text-amber-600',
-      urgent: 'text-red-600',
-      emergency: 'text-red-600 animate-pulse',
-    }
-    return colors[priority] || 'text-slate-500'
-  }
-
   const formatDate = (date) => {
     if (!date) return '-'
-    return new Date(date).toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+    return new Date(date).toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' })
   }
 
   return (
@@ -108,13 +105,18 @@ export default function JobList() {
           <div>
             <h1 className="text-3xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
               <Briefcase className="w-8 h-8 text-emerald-600" />
-              All Jobs
+              All Jobs ({jobs.length})
             </h1>
             <p className="text-slate-500 dark:text-slate-400 mt-1">View, edit, reschedule and manage all jobs</p>
           </div>
-          <button onClick={() => navigate('/operations/jobs/new')} className="neu-raised neu-btn px-6 py-3 rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-2">
-            <Plus className="w-5 h-5" /><span>New Job</span>
-          </button>
+          <div className="flex gap-2">
+            <button onClick={handleRefresh} className="neu-raised neu-btn px-4 py-3 rounded-2xl bg-slate-500 text-white hover:bg-slate-600 flex items-center gap-2" title="Refresh">
+              <RefreshCw className="w-5 h-5" />
+            </button>
+            <button onClick={() => navigate('/operations/jobs/new')} className="neu-raised neu-btn px-6 py-3 rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-2">
+              <Plus className="w-5 h-5" /><span>New Job</span>
+            </button>
+          </div>
         </motion.div>
 
         {/* Filters */}
@@ -122,7 +124,13 @@ export default function JobList() {
           <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search jobs by title or number..." className="w-full pl-10 pr-4 py-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300 bg-white/50 dark:bg-slate-800/50" />
+              <input 
+                type="text" 
+                value={search} 
+                onChange={(e) => setSearch(e.target.value)} 
+                placeholder="Search jobs by title or number..." 
+                className="w-full pl-10 pr-4 py-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300 bg-white/50 dark:bg-slate-800/50" 
+              />
             </div>
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-4 py-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300 bg-white/50 dark:bg-slate-800/50">
               <option value="all">All Status</option>
@@ -131,19 +139,10 @@ export default function JobList() {
               <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
-              <option value="overdue">Overdue</option>
             </select>
             <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="px-4 py-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300 bg-white/50 dark:bg-slate-800/50">
               <option value="all">All Categories</option>
               {jobCategories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-            </select>
-            <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} className="px-4 py-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300 bg-white/50 dark:bg-slate-800/50">
-              <option value="all">All Priorities</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
-              <option value="emergency">Emergency</option>
             </select>
             <button type="submit" className="neu-raised neu-btn px-6 py-3 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-colors">Search</button>
           </form>
@@ -156,19 +155,25 @@ export default function JobList() {
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                   <th className="text-left text-sm font-medium text-slate-500 dark:text-slate-400 py-4 px-4">Job #</th>
-                  <th className="text-left text-sm font-medium text-slate-500 dark:text-slate-400 py-4 px-4">Title / Client</th>
-                  <th className="text-left text-sm font-medium text-slate-500 dark:text-slate-400 py-4 px-4">Category</th>
+                  <th className="text-left text-sm font-medium text-slate-500 dark:text-slate-400 py-4 px-4">Title</th>
                   <th className="text-left text-sm font-medium text-slate-500 dark:text-slate-400 py-4 px-4">Schedule</th>
-                  <th className="text-left text-sm font-medium text-slate-500 dark:text-slate-400 py-4 px-4">Priority</th>
                   <th className="text-left text-sm font-medium text-slate-500 dark:text-slate-400 py-4 px-4">Status</th>
                   <th className="text-center text-sm font-medium text-slate-500 dark:text-slate-400 py-4 px-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={7} className="text-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto"></div></td></tr>
+                  <tr><td colSpan={5} className="text-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto"></div><p className="text-slate-500 mt-2">Loading jobs...</p></td></tr>
                 ) : jobs.length === 0 ? (
-                  <tr><td colSpan={7} className="text-center py-12 text-slate-500">No jobs found</td></tr>
+                  <tr>
+                    <td colSpan={5} className="text-center py-12">
+                      <Briefcase className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+                      <p className="text-slate-500 dark:text-slate-400">No jobs found</p>
+                      <button onClick={() => navigate('/operations/jobs/new')} className="mt-3 text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+                        Create your first job →
+                      </button>
+                    </td>
+                  </tr>
                 ) : (
                   jobs.map((job) => (
                     <tr key={job.id} className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
@@ -177,14 +182,7 @@ export default function JobList() {
                       </td>
                       <td className="py-4 px-4">
                         <p className="font-medium text-slate-800 dark:text-white text-sm">{job.title}</p>
-                        <p className="text-xs text-slate-500">{job.clients?.company_name || 'No client'}</p>
-                      </td>
-                      <td className="py-4 px-4">
-                        {job.job_categories ? (
-                          <span className="px-2 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: job.job_categories.color + '20', color: job.job_categories.color }}>
-                            {job.job_categories.name}
-                          </span>
-                        ) : '-'}
+                        <p className="text-xs text-slate-500">{job.site_city || 'No location'}</p>
                       </td>
                       <td className="py-4 px-4">
                         <div className="text-sm">
@@ -193,13 +191,10 @@ export default function JobList() {
                           </p>
                           {job.scheduled_start_time && (
                             <p className="text-xs text-slate-500 flex items-center gap-1">
-                              <Clock className="w-3 h-3" /> {job.scheduled_start_time?.slice(0,5)} - {job.scheduled_end_time?.slice(0,5) || '?'}
+                              <Clock className="w-3 h-3" /> {job.scheduled_start_time?.slice(0,5)}
                             </p>
                           )}
                         </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className={`text-xs font-medium capitalize ${getPriorityColor(job.priority)}`}>{job.priority}</span>
                       </td>
                       <td className="py-4 px-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(job.status)}`}>
@@ -214,7 +209,7 @@ export default function JobList() {
                           <button onClick={() => navigate(`/operations/jobs/${job.id}?edit=true`)} className="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 text-slate-400 hover:text-blue-600 transition-colors" title="Edit / Reschedule">
                             <Pencil className="w-4 h-4" />
                           </button>
-                          <button onClick={() => setDeleteConfirm(job.id)} className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-slate-400 hover:text-red-600 transition-colors" title="Delete / Cancel">
+                          <button onClick={() => setDeleteConfirm(job.id)} className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-slate-400 hover:text-red-600 transition-colors" title="Cancel Job">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -226,6 +221,13 @@ export default function JobList() {
             </table>
           </div>
         </motion.div>
+
+        {/* Job Count Summary */}
+        {jobs.length > 0 && (
+          <p className="text-xs text-slate-400 mt-4 text-center">
+            Showing {jobs.length} job{jobs.length !== 1 ? 's' : ''}
+          </p>
+        )}
       </main>
 
       {/* Delete Confirmation Modal */}
