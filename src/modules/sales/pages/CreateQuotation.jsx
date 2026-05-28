@@ -10,11 +10,11 @@ import toast from 'react-hot-toast'
 import { 
   FileText, Plus, Trash2, Download, Eye,
   Sun, Moon, Sparkles, ChevronRight,
-  Save, Send
+  Save, Send, Briefcase
 } from 'lucide-react'
 
 // UPDATED Pre-defined services with new prices
-const SERVICES = [
+var SERVICES = [
   // Once-Off Cleaning
   { category: 'Once-Off Cleaning', name: '1 Bedroom - Once-Off', unit_price: 1304.35, unit: 'per_service' },
   { category: 'Once-Off Cleaning', name: '2 Bedroom - Once-Off', unit_price: 1739.13, unit: 'per_service' },
@@ -42,13 +42,16 @@ const SERVICES = [
 ]
 
 export default function CreateQuotation() {
-  const { createQuotation } = useSalesStore()
-  const { clients, fetchClients } = useCRMStore()
-  const { isDark, toggleTheme } = useThemeStore()
-  const navigate = useNavigate()
-  const pdfRef = useRef(null)
+  var createQuotation = useSalesStore(function(state) { return state.createQuotation })
+  var convertQuotationToJob = useSalesStore(function(state) { return state.convertQuotationToJob })
+  var clients = useCRMStore(function(state) { return state.clients })
+  var fetchClients = useCRMStore(function(state) { return state.fetchClients })
+  var isDark = useThemeStore(function(state) { return state.isDark })
+  var toggleTheme = useThemeStore(function(state) { return state.toggleTheme })
+  var navigate = useNavigate()
+  var pdfRef = useRef(null)
 
-  const [quotationData, setQuotationData] = useState({
+  var [quotationData, setQuotationData] = useState({
     client_id: '',
     client_name: '',
     client_email: '',
@@ -63,61 +66,62 @@ export default function CreateQuotation() {
     status: 'draft'
   })
 
-  const [items, setItems] = useState([
+  var [items, setItems] = useState([
     { description: '', quantity: 1, unit: 'per_service', unit_price: 0, tax_percent: 15, discount_percent: 0 }
   ])
 
-  useEffect(() => {
+  var [savedQuotationId, setSavedQuotationId] = useState(null)
+
+  useEffect(function() {
     fetchClients({ status: 'active' })
   }, [])
 
   // ============================================
   // BACKGROUND CALCULATOR (Runs silently)
   // ============================================
-  const calculateLineTotal = (item) => {
-    const qty = item.quantity || 0
-    const price = item.unit_price || 0
+  var calculateLineTotal = function(item) {
+    var qty = item.quantity || 0
+    var price = item.unit_price || 0
     return qty * price
   }
 
-  const calculateSubtotal = () => {
-    return items.reduce((sum, item) => sum + calculateLineTotal(item), 0)
+  var calculateSubtotal = function() {
+    return items.reduce(function(sum, item) { return sum + calculateLineTotal(item) }, 0)
   }
 
-  const calculateVAT = () => {
+  var calculateVAT = function() {
     return calculateSubtotal() * 0.15
   }
 
-  const calculateTotal = () => {
+  var calculateTotal = function() {
     return calculateSubtotal() + calculateVAT()
   }
 
-  // Computed values (used in background for PDF and saving)
-  const subtotal = calculateSubtotal()
-  const vatAmount = calculateVAT()
-  const totalAmount = calculateTotal()
+  var subtotal = calculateSubtotal()
+  var vatAmount = calculateVAT()
+  var totalAmount = calculateTotal()
 
   // ============================================
   // CLIENT & SERVICE HANDLERS
   // ============================================
-  const handleClientSelect = (clientId) => {
-    const client = clients.find(c => c.id === clientId)
+  var handleClientSelect = function(clientId) {
+    var client = clients.find(function(c) { return c.id === clientId })
     if (client) {
       setQuotationData({
         ...quotationData,
         client_id: client.id,
-        client_name: client.company_name,
+        client_name: client.company_name || '',
         client_email: client.email || '',
         client_phone: client.phone || '',
-        client_address: `${client.address_line1 || ''}, ${client.city || ''}, ${client.postal_code || ''}`
+        client_address: (client.address_line1 || '') + ', ' + (client.city || '') + ', ' + (client.postal_code || '')
       })
     }
   }
 
-  const handleServiceSelect = (index, serviceName) => {
-    const service = SERVICES.find(s => s.name === serviceName)
+  var handleServiceSelect = function(index, serviceName) {
+    var service = SERVICES.find(function(s) { return s.name === serviceName })
     if (service) {
-      const newItems = [...items]
+      var newItems = [...items]
       newItems[index] = {
         ...newItems[index],
         description: service.name,
@@ -129,55 +133,59 @@ export default function CreateQuotation() {
     }
   }
 
-  const addItem = () => {
+  var addItem = function() {
     setItems([...items, { description: '', quantity: 1, unit: 'per_service', unit_price: 0, tax_percent: 15, discount_percent: 0 }])
   }
 
-  const removeItem = (index) => {
+  var removeItem = function(index) {
     if (items.length > 1) {
-      setItems(items.filter((_, i) => i !== index))
+      setItems(items.filter(function(_, i) { return i !== index }))
     }
   }
 
-  const updateItem = (index, field, value) => {
-    const newItems = [...items]
+  var updateItem = function(index, field, value) {
+    var newItems = [...items]
     newItems[index] = { ...newItems[index], [field]: value }
     setItems(newItems)
   }
 
   // ============================================
-  // SAVE & DOWNLOAD HANDLERS
+  // SAVE, DOWNLOAD & CONVERT HANDLERS
   // ============================================
-  const handleSave = async (status = 'draft') => {
+  var handleSave = async function(status) {
+    status = status || 'draft'
+    
     if (!quotationData.client_name) {
       toast.error('Please select a client')
       return
     }
     
-    const hasItems = items.some(item => item.description && item.unit_price > 0)
+    var hasItems = items.some(function(item) { return item.description && item.unit_price > 0 })
     if (!hasItems) {
       toast.error('Please add at least one service with a price')
       return
     }
 
-    const result = await createQuotation(
+    var result = await createQuotation(
       { 
         ...quotationData, 
-        subtotal,
+        subtotal: subtotal,
         tax_amount: vatAmount,
         discount_amount: 0,
         total_amount: totalAmount,
-        status 
+        status: status 
       },
-      items.map(item => ({
-        description: item.description,
-        quantity: item.quantity || 1,
-        unit: item.unit,
-        unit_price: item.unit_price || 0,
-        tax_percent: 15,
-        discount_percent: 0,
-        total_price: calculateLineTotal(item)
-      }))
+      items.map(function(item) {
+        return {
+          description: item.description,
+          quantity: item.quantity || 1,
+          unit: item.unit,
+          unit_price: item.unit_price || 0,
+          tax_percent: 15,
+          discount_percent: 0,
+          total_price: calculateLineTotal(item)
+        }
+      })
     )
     
     if (result.error) {
@@ -185,24 +193,39 @@ export default function CreateQuotation() {
       return
     }
     
-    toast.success(status === 'sent' ? 'Quotation sent!' : 'Quotation saved as draft!')
     if (result.data) {
-      navigate(`/sales/quotations/${result.data.id}`)
+      setSavedQuotationId(result.data.id)
+      toast.success(status === 'sent' ? 'Quotation sent!' : 'Quotation saved as draft!')
     }
   }
 
-  const downloadPDF = async () => {
+  var handleConvertToJob = async function() {
+    if (!savedQuotationId) {
+      toast.error('Please save the quotation first')
+      return
+    }
+
+    var result = await convertQuotationToJob(savedQuotationId)
+    if (result.success) {
+      toast.success('Quotation converted to job successfully!')
+      navigate('/operations/jobs/' + result.data.id)
+    } else {
+      toast.error('Failed to convert to job: ' + (result.error || 'Unknown error'))
+    }
+  }
+
+  var downloadPDF = async function() {
     try {
-      const html2pdf = (await import('html2pdf.js')).default
-      const element = pdfRef.current
+      var html2pdf = (await import('html2pdf.js')).default
+      var element = pdfRef.current
       if (!element) {
         toast.error('PDF preview not ready')
         return
       }
 
-      const opt = {
+      var opt = {
         margin: [0, 0, 0, 0],
-        filename: `Quotation_${quotationData.client_name?.replace(/\s+/g, '_') || 'client'}.pdf`,
+        filename: 'Quotation_' + (quotationData.client_name || 'client').replace(/\s+/g, '_') + '.pdf',
         image: { type: 'jpeg', quality: 1 },
         html2canvas: { 
           scale: 2,
@@ -227,7 +250,7 @@ export default function CreateQuotation() {
     }
   }
 
-  const formatCurrency = (amount) => {
+  var formatCurrency = function(amount) {
     return new Intl.NumberFormat('en-ZA', {
       style: 'currency',
       currency: 'ZAR',
@@ -237,7 +260,7 @@ export default function CreateQuotation() {
   }
 
   // Group services by category
-  const serviceCategories = [...new Set(SERVICES.map(s => s.category))]
+  var serviceCategories = [...new Set(SERVICES.map(function(s) { return s.category }))]
 
   return (
     <div className={`min-h-screen font-['Inter'] transition-colors duration-300 ${isDark ? 'dark' : ''}`}>
@@ -273,18 +296,35 @@ export default function CreateQuotation() {
           <div className="flex gap-3">
             <button onClick={downloadPDF} className="neu-raised neu-btn px-4 py-2 rounded-xl flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700">
               <Download className="w-4 h-4" />
-              <span>Download PDF</span>
+              <span className="hidden sm:inline">Download PDF</span>
             </button>
-            <button onClick={() => handleSave('draft')} className="neu-raised neu-btn px-4 py-2 rounded-xl flex items-center gap-2 bg-slate-600 text-white hover:bg-slate-700">
+            <button onClick={function() { handleSave('draft') }} className="neu-raised neu-btn px-4 py-2 rounded-xl flex items-center gap-2 bg-slate-600 text-white hover:bg-slate-700">
               <Save className="w-4 h-4" />
-              <span>Save Draft</span>
+              <span className="hidden sm:inline">Save Draft</span>
             </button>
-            <button onClick={() => handleSave('sent')} className="neu-raised neu-btn px-4 py-2 rounded-xl flex items-center gap-2 bg-emerald-600 text-white hover:bg-emerald-700">
+            <button onClick={function() { handleSave('sent') }} className="neu-raised neu-btn px-4 py-2 rounded-xl flex items-center gap-2 bg-emerald-600 text-white hover:bg-emerald-700">
               <Send className="w-4 h-4" />
-              <span>Save & Send</span>
+              <span className="hidden sm:inline">Save & Send</span>
             </button>
           </div>
         </div>
+
+        {/* Convert to Job Button - Shows after saving */}
+        {savedQuotationId && (
+          <div className="mb-6 p-4 neu-raised rounded-2xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-orange-800 dark:text-orange-300">Quotation Saved!</p>
+              <p className="text-xs text-orange-600 dark:text-orange-400">You can now convert this quotation to a job or continue editing.</p>
+            </div>
+            <button 
+              onClick={handleConvertToJob}
+              className="px-5 py-2.5 rounded-xl bg-orange-600 text-white hover:bg-orange-700 flex items-center gap-2 transition-colors"
+            >
+              <Briefcase className="w-4 h-4" />
+              <span>Convert to Job</span>
+            </button>
+          </div>
+        )}
 
         {/* Quotation Form */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -296,20 +336,24 @@ export default function CreateQuotation() {
               <div className="space-y-4">
                 <select
                   value={quotationData.client_id}
-                  onChange={(e) => handleClientSelect(e.target.value)}
+                  onChange={function(e) { handleClientSelect(e.target.value) }}
                   className="w-full p-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300"
                 >
                   <option value="">Select Client</option>
-                  {clients.map(client => (
-                    <option key={client.id} value={client.id}>{client.company_name}</option>
-                  ))}
+                  {clients.map(function(client) {
+                    return (
+                      <option key={client.id} value={client.id}>
+                        {client.company_name || client.first_name + ' ' + client.last_name}
+                      </option>
+                    )
+                  })}
                 </select>
-                <input type="text" value={quotationData.client_name} onChange={(e) => setQuotationData({...quotationData, client_name: e.target.value})} placeholder="Client Name" className="w-full p-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300" />
+                <input type="text" value={quotationData.client_name} onChange={function(e) { setQuotationData({...quotationData, client_name: e.target.value}) }} placeholder="Client Name" className="w-full p-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300" />
                 <div className="grid grid-cols-2 gap-3">
-                  <input type="email" value={quotationData.client_email} onChange={(e) => setQuotationData({...quotationData, client_email: e.target.value})} placeholder="Email" className="p-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300" />
-                  <input type="text" value={quotationData.client_phone} onChange={(e) => setQuotationData({...quotationData, client_phone: e.target.value})} placeholder="Phone" className="p-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300" />
+                  <input type="email" value={quotationData.client_email} onChange={function(e) { setQuotationData({...quotationData, client_email: e.target.value}) }} placeholder="Email" className="p-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300" />
+                  <input type="text" value={quotationData.client_phone} onChange={function(e) { setQuotationData({...quotationData, client_phone: e.target.value}) }} placeholder="Phone" className="p-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300" />
                 </div>
-                <textarea value={quotationData.client_address} onChange={(e) => setQuotationData({...quotationData, client_address: e.target.value})} placeholder="Address" rows={2} className="w-full p-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300" />
+                <textarea value={quotationData.client_address} onChange={function(e) { setQuotationData({...quotationData, client_address: e.target.value}) }} placeholder="Address" rows={2} className="w-full p-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300" />
               </div>
             </div>
 
@@ -323,62 +367,68 @@ export default function CreateQuotation() {
               </div>
               
               <div className="space-y-4">
-                {items.map((item, index) => (
-                  <div key={index} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-700/30 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-slate-500">Service {index + 1}</span>
-                      <button onClick={() => removeItem(index)} className="text-red-500 hover:text-red-600">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                    
-                    <select
-                      value={item.description}
-                      onChange={(e) => handleServiceSelect(index, e.target.value)}
-                      className="w-full p-2 neu-inset rounded-lg text-sm text-slate-700 dark:text-slate-300"
-                    >
-                      <option value="">Select Service</option>
-                      {serviceCategories.map(category => (
-                        <optgroup key={category} label={category}>
-                          {SERVICES.filter(s => s.category === category).map(service => (
-                            <option key={service.name} value={service.name}>
-                              {service.name} - {formatCurrency(service.unit_price)}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </select>
-                    
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="text-xs text-slate-500">Quantity</label>
-                        <input 
-                          type="number" 
-                          value={item.quantity} 
-                          onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)} 
-                          min="1" 
-                          className="w-full p-2 neu-inset rounded-lg text-sm text-slate-700 dark:text-slate-300 mt-1" 
-                        />
+                {items.map(function(item, index) {
+                  return (
+                    <div key={index} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-700/30 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-slate-500">Service {index + 1}</span>
+                        <button onClick={function() { removeItem(index) }} className="text-red-500 hover:text-red-600">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
-                      <div>
-                        <label className="text-xs text-slate-500">Unit Price (Excl. VAT)</label>
-                        <input 
-                          type="number" 
-                          value={item.unit_price} 
-                          onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)} 
-                          className="w-full p-2 neu-inset rounded-lg text-sm text-slate-700 dark:text-slate-300 mt-1" 
-                        />
+                      
+                      <select
+                        value={item.description}
+                        onChange={function(e) { handleServiceSelect(index, e.target.value) }}
+                        className="w-full p-2 neu-inset rounded-lg text-sm text-slate-700 dark:text-slate-300"
+                      >
+                        <option value="">Select Service</option>
+                        {serviceCategories.map(function(category) {
+                          return (
+                            <optgroup key={category} label={category}>
+                              {SERVICES.filter(function(s) { return s.category === category }).map(function(service) {
+                                return (
+                                  <option key={service.name} value={service.name}>
+                                    {service.name} - {formatCurrency(service.unit_price)}
+                                  </option>
+                                )
+                              })}
+                            </optgroup>
+                          )
+                        })}
+                      </select>
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-xs text-slate-500">Quantity</label>
+                          <input 
+                            type="number" 
+                            value={item.quantity} 
+                            onChange={function(e) { updateItem(index, 'quantity', parseInt(e.target.value) || 1) }} 
+                            min="1" 
+                            className="w-full p-2 neu-inset rounded-lg text-sm text-slate-700 dark:text-slate-300 mt-1" 
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-slate-500">Unit Price (Excl. VAT)</label>
+                          <input 
+                            type="number" 
+                            value={item.unit_price} 
+                            onChange={function(e) { updateItem(index, 'unit_price', parseFloat(e.target.value) || 0) }} 
+                            className="w-full p-2 neu-inset rounded-lg text-sm text-slate-700 dark:text-slate-300 mt-1" 
+                          />
+                        </div>
+                      </div>
+                      {/* Line Total */}
+                      <div className="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-slate-600">
+                        <span className="text-xs text-slate-500">Line Total (Excl. VAT):</span>
+                        <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                          {formatCurrency(calculateLineTotal(item))}
+                        </span>
                       </div>
                     </div>
-                    {/* Line Total */}
-                    <div className="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-slate-600">
-                      <span className="text-xs text-slate-500">Line Total (Excl. VAT):</span>
-                      <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                        {formatCurrency(calculateLineTotal(item))}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
 
@@ -388,15 +438,34 @@ export default function CreateQuotation() {
               <div className="space-y-4">
                 <div>
                   <label className="text-sm text-slate-500">Valid Until</label>
-                  <input type="date" value={quotationData.valid_until} onChange={(e) => setQuotationData({...quotationData, valid_until: e.target.value})} className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
+                  <input type="date" value={quotationData.valid_until} onChange={function(e) { setQuotationData({...quotationData, valid_until: e.target.value}) }} className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
                 </div>
-                <textarea value={quotationData.notes} onChange={(e) => setQuotationData({...quotationData, notes: e.target.value})} placeholder="Additional notes for client..." rows={2} className="w-full p-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300" />
+                <textarea value={quotationData.notes} onChange={function(e) { setQuotationData({...quotationData, notes: e.target.value}) }} placeholder="Additional notes for client..." rows={2} className="w-full p-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300" />
               </div>
             </div>
           </div>
 
           {/* Preview - Right Side */}
           <div className="lg:sticky lg:top-24 h-fit space-y-4">
+            {/* Totals Summary */}
+            <div className="neu-raised rounded-3xl p-6">
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Quotation Summary</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Subtotal (Excl. VAT):</span>
+                  <span className="text-slate-700 dark:text-slate-300 font-medium">{formatCurrency(subtotal)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">VAT (15%):</span>
+                  <span className="text-slate-700 dark:text-slate-300 font-medium">{formatCurrency(vatAmount)}</span>
+                </div>
+                <div className="flex justify-between text-sm pt-3 border-t border-slate-200 dark:border-slate-700">
+                  <span className="text-slate-800 dark:text-white font-bold text-lg">Total (Incl. VAT):</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold text-lg">{formatCurrency(totalAmount)}</span>
+                </div>
+              </div>
+            </div>
+
             {/* A4 Preview */}
             <div className="neu-raised rounded-3xl p-4">
               <h3 className="text-sm font-semibold text-slate-800 dark:text-white mb-3 flex items-center gap-2">
@@ -409,15 +478,17 @@ export default function CreateQuotation() {
                     ref={pdfRef}
                     quotation={{ 
                       ...quotationData, 
-                      subtotal,
+                      subtotal: subtotal,
                       tax_amount: vatAmount,
                       total_amount: totalAmount,
                       quotation_number: 'Q-25-XXXX' 
                     }}
-                    items={items.filter(item => item.description).map((item) => ({ 
-                      ...item, 
-                      total_price: calculateLineTotal(item) 
-                    }))}
+                    items={items.filter(function(item) { return item.description }).map(function(item) { 
+                      return { 
+                        ...item, 
+                        total_price: calculateLineTotal(item) 
+                      }
+                    })}
                   />
                 </div>
               </div>
@@ -432,14 +503,16 @@ export default function CreateQuotation() {
           ref={pdfRef}
           quotation={{ 
             ...quotationData, 
-            subtotal,
+            subtotal: subtotal,
             tax_amount: vatAmount,
             total_amount: totalAmount
           }}
-          items={items.filter(item => item.description).map((item) => ({ 
-            ...item, 
-            total_price: calculateLineTotal(item) 
-          }))}
+          items={items.filter(function(item) { return item.description }).map(function(item) { 
+            return { 
+              ...item, 
+              total_price: calculateLineTotal(item) 
+            }
+          })}
         />
       </div>
     </div>
