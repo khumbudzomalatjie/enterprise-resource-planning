@@ -56,10 +56,10 @@ export default function AddItem() {
         description: item.description || '',
         category_id: item.category_id || '',
         unit: item.unit || 'each',
-        unit_cost: item.unit_cost || '',
-        unit_price: item.unit_price || '',
+        unit_cost: item.unit_cost ?? '',
+        unit_price: item.unit_price ?? '',
         minimum_stock: item.minimum_stock || 0,
-        maximum_stock: item.maximum_stock || '',
+        maximum_stock: item.maximum_stock ?? '',
         reorder_point: item.reorder_point || 10,
         reorder_quantity: item.reorder_quantity || 50,
         default_warehouse_id: item.default_warehouse_id || '',
@@ -90,15 +90,29 @@ export default function AddItem() {
 
     setLoading(true)
     
+    // Convert empty strings to null for UUID fields
     const data = {
-      ...formData,
+      name: formData.name,
+      description: formData.description || null,
+      category_id: formData.category_id || null,
+      unit: formData.unit,
       unit_cost: formData.unit_cost ? parseFloat(formData.unit_cost) : null,
       unit_price: formData.unit_price ? parseFloat(formData.unit_price) : null,
       minimum_stock: parseInt(formData.minimum_stock) || 0,
       maximum_stock: formData.maximum_stock ? parseInt(formData.maximum_stock) : null,
       reorder_point: parseInt(formData.reorder_point) || 10,
       reorder_quantity: parseInt(formData.reorder_quantity) || 50,
+      default_warehouse_id: formData.default_warehouse_id || null,
+      preferred_supplier_id: formData.preferred_supplier_id || null,
+      storage_location: formData.storage_location || null,
+      shelf_number: formData.shelf_number || null,
+      bin_number: formData.bin_number || null,
+      barcode: formData.barcode || null,
+      notes: formData.notes || null,
+      status: formData.status || 'active'
     }
+
+    console.log('Saving item data:', data) // Debug log
 
     let result
     if (isEditing) {
@@ -114,6 +128,7 @@ export default function AddItem() {
       navigate('/inventory/items')
     } else {
       toast.error(result.error || 'Failed to save item')
+      console.error('Save error:', result.error)
     }
   }
 
@@ -141,137 +156,144 @@ export default function AddItem() {
             {isEditing ? 'Edit Item' : 'Add New Item'}
           </h1>
 
-          <form onSubmit={handleSubmit}>
-            {/* Basic Information */}
-            <div className="neu-raised rounded-3xl p-6 mb-6">
-              <h2 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Basic Information</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="text-sm text-slate-500">Item Name *</label>
-                  <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="e.g., Multi-Purpose Cleaner 5L" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" required />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-sm text-slate-500">Description</label>
-                  <textarea name="description" value={formData.description} onChange={handleChange} rows={2} placeholder="Item description..." className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500">Category</label>
-                  <select name="category_id" value={formData.category_id} onChange={handleChange} className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300">
-                    <option value="">Select Category</option>
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500">Unit *</label>
-                  <select name="unit" value={formData.unit} onChange={handleChange} className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" required>
-                    <option value="each">Each</option>
-                    <option value="bottle">Bottle</option>
-                    <option value="box">Box</option>
-                    <option value="pack">Pack</option>
-                    <option value="liter">Liter</option>
-                    <option value="kg">Kilogram</option>
-                    <option value="roll">Roll</option>
-                    <option value="unit">Unit</option>
-                    <option value="pair">Pair</option>
-                    <option value="set">Set</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500">Unit Cost (R)</label>
-                  <input type="number" name="unit_cost" value={formData.unit_cost} onChange={handleChange} step="0.01" min="0" placeholder="0.00" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500">Unit Price (R)</label>
-                  <input type="number" name="unit_price" value={formData.unit_price} onChange={handleChange} step="0.01" min="0" placeholder="0.00" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500">Status</label>
-                  <select name="status" value={formData.status} onChange={handleChange} className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300">
-                    <option value="active">Active</option>
-                    <option value="discontinued">Discontinued</option>
-                    <option value="seasonal">Seasonal</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500">Barcode</label>
-                  <input type="text" name="barcode" value={formData.barcode} onChange={handleChange} placeholder="Scan or enter barcode" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
+          {loading && isEditing ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+              <p className="text-slate-500">Loading item...</p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              {/* Basic Information */}
+              <div className="neu-raised rounded-3xl p-6 mb-6">
+                <h2 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Basic Information</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="text-sm text-slate-500">Item Name *</label>
+                    <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="e.g., Multi-Purpose Cleaner 5L" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" required />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-sm text-slate-500">Description</label>
+                    <textarea name="description" value={formData.description} onChange={handleChange} rows={2} placeholder="Item description..." className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-500">Category</label>
+                    <select name="category_id" value={formData.category_id} onChange={handleChange} className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300">
+                      <option value="">Select Category</option>
+                      {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-500">Unit *</label>
+                    <select name="unit" value={formData.unit} onChange={handleChange} className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" required>
+                      <option value="each">Each</option>
+                      <option value="bottle">Bottle</option>
+                      <option value="box">Box</option>
+                      <option value="pack">Pack</option>
+                      <option value="liter">Liter</option>
+                      <option value="kg">Kilogram</option>
+                      <option value="roll">Roll</option>
+                      <option value="unit">Unit</option>
+                      <option value="pair">Pair</option>
+                      <option value="set">Set</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-500">Unit Cost (R)</label>
+                    <input type="number" name="unit_cost" value={formData.unit_cost} onChange={handleChange} step="0.01" min="0" placeholder="0.00" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-500">Unit Price (R)</label>
+                    <input type="number" name="unit_price" value={formData.unit_price} onChange={handleChange} step="0.01" min="0" placeholder="0.00" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-500">Status</label>
+                    <select name="status" value={formData.status} onChange={handleChange} className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300">
+                      <option value="active">Active</option>
+                      <option value="discontinued">Discontinued</option>
+                      <option value="seasonal">Seasonal</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-500">Barcode</label>
+                    <input type="text" name="barcode" value={formData.barcode} onChange={handleChange} placeholder="Scan or enter barcode" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Stock Levels */}
-            <div className="neu-raised rounded-3xl p-6 mb-6">
-              <h2 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Stock Management</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-slate-500">Minimum Stock Level</label>
-                  <input type="number" name="minimum_stock" value={formData.minimum_stock} onChange={handleChange} min="0" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500">Maximum Stock Level</label>
-                  <input type="number" name="maximum_stock" value={formData.maximum_stock} onChange={handleChange} min="0" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500">Reorder Point</label>
-                  <input type="number" name="reorder_point" value={formData.reorder_point} onChange={handleChange} min="0" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500">Reorder Quantity</label>
-                  <input type="number" name="reorder_quantity" value={formData.reorder_quantity} onChange={handleChange} min="0" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
+              {/* Stock Levels */}
+              <div className="neu-raised rounded-3xl p-6 mb-6">
+                <h2 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Stock Management</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-slate-500">Minimum Stock Level</label>
+                    <input type="number" name="minimum_stock" value={formData.minimum_stock} onChange={handleChange} min="0" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-500">Maximum Stock Level</label>
+                    <input type="number" name="maximum_stock" value={formData.maximum_stock} onChange={handleChange} min="0" placeholder="Optional" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-500">Reorder Point</label>
+                    <input type="number" name="reorder_point" value={formData.reorder_point} onChange={handleChange} min="0" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-500">Reorder Quantity</label>
+                    <input type="number" name="reorder_quantity" value={formData.reorder_quantity} onChange={handleChange} min="0" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Storage & Supplier */}
-            <div className="neu-raised rounded-3xl p-6 mb-6">
-              <h2 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Storage & Supplier</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-slate-500">Default Warehouse</label>
-                  <select name="default_warehouse_id" value={formData.default_warehouse_id} onChange={handleChange} className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300">
-                    <option value="">Select Warehouse</option>
-                    {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500">Preferred Supplier</label>
-                  <select name="preferred_supplier_id" value={formData.preferred_supplier_id} onChange={handleChange} className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300">
-                    <option value="">Select Supplier</option>
-                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.company_name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500">Storage Location</label>
-                  <input type="text" name="storage_location" value={formData.storage_location} onChange={handleChange} placeholder="e.g., Aisle A" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500">Shelf Number</label>
-                  <input type="text" name="shelf_number" value={formData.shelf_number} onChange={handleChange} placeholder="e.g., S-01" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
-                </div>
-                <div>
-                  <label className="text-sm text-slate-500">Bin Number</label>
-                  <input type="text" name="bin_number" value={formData.bin_number} onChange={handleChange} placeholder="e.g., B-001" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
+              {/* Storage & Supplier */}
+              <div className="neu-raised rounded-3xl p-6 mb-6">
+                <h2 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Storage & Supplier</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-slate-500">Default Warehouse</label>
+                    <select name="default_warehouse_id" value={formData.default_warehouse_id} onChange={handleChange} className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300">
+                      <option value="">Select Warehouse</option>
+                      {warehouses.map(w => <option key={w.id} value={w.id}>{w.name} ({w.city})</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-500">Preferred Supplier</label>
+                    <select name="preferred_supplier_id" value={formData.preferred_supplier_id} onChange={handleChange} className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300">
+                      <option value="">Select Supplier</option>
+                      {suppliers.map(s => <option key={s.id} value={s.id}>{s.company_name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-500">Storage Location</label>
+                    <input type="text" name="storage_location" value={formData.storage_location} onChange={handleChange} placeholder="e.g., Aisle A" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-500">Shelf Number</label>
+                    <input type="text" name="shelf_number" value={formData.shelf_number} onChange={handleChange} placeholder="e.g., S-01" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-500">Bin Number</label>
+                    <input type="text" name="bin_number" value={formData.bin_number} onChange={handleChange} placeholder="e.g., B-001" className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Notes */}
-            <div className="neu-raised rounded-3xl p-6 mb-6">
-              <h2 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Additional Notes</h2>
-              <textarea name="notes" value={formData.notes} onChange={handleChange} rows={3} placeholder="Any additional notes..." className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
-            </div>
+              {/* Notes */}
+              <div className="neu-raised rounded-3xl p-6 mb-6">
+                <h2 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Additional Notes</h2>
+                <textarea name="notes" value={formData.notes} onChange={handleChange} rows={3} placeholder="Any additional notes..." className="w-full p-3 neu-inset rounded-xl mt-1 text-slate-700 dark:text-slate-300" />
+              </div>
 
-            {/* Actions */}
-            <div className="flex gap-4 justify-end">
-              <button type="button" onClick={() => navigate('/inventory/items')} className="neu-raised neu-btn px-6 py-3 rounded-2xl bg-slate-500 text-white hover:bg-slate-600">
-                Cancel
-              </button>
-              <button type="submit" disabled={loading} className="neu-raised neu-btn px-8 py-3 rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-2 disabled:opacity-50">
-                <Save className="w-5 h-5" />
-                <span>{loading ? 'Saving...' : isEditing ? 'Update Item' : 'Create Item'}</span>
-              </button>
-            </div>
-          </form>
+              {/* Actions */}
+              <div className="flex gap-4 justify-end">
+                <button type="button" onClick={() => navigate('/inventory/items')} className="neu-raised neu-btn px-6 py-3 rounded-2xl bg-slate-500 text-white hover:bg-slate-600">
+                  Cancel
+                </button>
+                <button type="submit" disabled={loading} className="neu-raised neu-btn px-8 py-3 rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-2 disabled:opacity-50">
+                  <Save className="w-5 h-5" />
+                  <span>{loading ? 'Saving...' : isEditing ? 'Update Item' : 'Create Item'}</span>
+                </button>
+              </div>
+            </form>
+          )}
         </motion.div>
       </main>
     </div>
