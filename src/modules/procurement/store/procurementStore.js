@@ -8,6 +8,7 @@ const useProcurementStore = create((set, get) => ({
   selectedPR: null,
   rfqs: [],
   selectedRFQ: null,
+  purchaseOrders: [],
   goodsReceipts: [],
   budgets: [],
   evaluations: [],
@@ -15,32 +16,46 @@ const useProcurementStore = create((set, get) => ({
   loading: false,
   error: null,
 
+  // Vendor Actions
   fetchVendors: async (filters = {}) => {
-    set({ loading: true })
+    set({ loading: true, error: null })
     const { data, error } = await procurementApi.getVendors(filters)
-    if (error) { set({ error: error.message, loading: false }); return { success: false } }
-    set({ vendors: data, loading: false })
+    if (error) { set({ error: error.message, loading: false }); return { success: false, error: error.message } }
+    set({ vendors: data || [], loading: false })
     return { success: true, data }
   },
 
   fetchVendor: async (id) => {
     const { data, error } = await procurementApi.getVendor(id)
-    if (error) return { success: false }
+    if (error) return { success: false, error: error.message }
     set({ selectedVendor: data })
     return { success: true, data }
   },
 
   createVendor: async (vendorData) => {
+    set({ loading: true, error: null })
     const { data, error } = await procurementApi.createVendor(vendorData)
-    if (error) return { success: false, error: error.message }
-    set(state => ({ vendors: [data, ...state.vendors] }))
+    if (error) {
+      set({ error: error.message, loading: false })
+      return { success: false, error: error.message }
+    }
+    set(state => ({ vendors: [data, ...(state.vendors || [])], loading: false }))
     return { success: true, data }
   },
 
+  updateVendor: async (id, updates) => {
+    const { data, error } = await procurementApi.updateVendor(id, updates)
+    if (error) return { success: false, error: error.message }
+    set(state => ({ vendors: state.vendors.map(v => v.id === id ? data : v) }))
+    return { success: true, data }
+  },
+
+  // Purchase Requisition Actions
   fetchPurchaseRequisitions: async (filters = {}) => {
+    set({ loading: true })
     const { data, error } = await procurementApi.getPurchaseRequisitions(filters)
-    if (error) return { success: false }
-    set({ purchaseRequisitions: data })
+    if (error) { set({ error: error.message, loading: false }); return { success: false } }
+    set({ purchaseRequisitions: data || [], loading: false })
     return { success: true, data }
   },
 
@@ -52,9 +67,16 @@ const useProcurementStore = create((set, get) => ({
   },
 
   createPurchaseRequisition: async (prData, items) => {
+    set({ loading: true, error: null })
     const result = await procurementApi.createPurchaseRequisition(prData, items)
-    if (result.error) return { success: false, error: result.error.message }
-    set(state => ({ purchaseRequisitions: [result.data, ...state.purchaseRequisitions] }))
+    if (result.error) {
+      set({ error: result.error.message || 'Failed to create PR', loading: false })
+      return { success: false, error: result.error.message || 'Failed to create PR' }
+    }
+    set(state => ({ 
+      purchaseRequisitions: [result.data, ...(state.purchaseRequisitions || [])], 
+      loading: false 
+    }))
     return { success: true, data: result.data }
   },
 
@@ -65,16 +87,22 @@ const useProcurementStore = create((set, get) => ({
     return { success: true }
   },
 
+  // RFQ Actions
   fetchRFQs: async (filters = {}) => {
     const { data, error } = await procurementApi.getRFQs(filters)
     if (error) return { success: false }
-    set({ rfqs: data })
+    set({ rfqs: data || [] })
     return { success: true, data }
   },
 
   createRFQ: async (rfqData, items) => {
+    set({ loading: true, error: null })
     const result = await procurementApi.createRFQ(rfqData, items)
-    if (result.error) return { success: false }
+    if (result.error) {
+      set({ error: result.error.message || 'Failed to create RFQ', loading: false })
+      return { success: false, error: result.error.message || 'Failed to create RFQ' }
+    }
+    set(state => ({ rfqs: [result.data, ...(state.rfqs || [])], loading: false }))
     return { success: true, data: result.data }
   },
 
@@ -92,38 +120,69 @@ const useProcurementStore = create((set, get) => ({
     return { success: true, data: result.data }
   },
 
+  // Purchase Order Actions
+  fetchPurchaseOrders: async (filters = {}) => {
+    const { data, error } = await procurementApi.getPurchaseOrders(filters)
+    if (error) return { success: false }
+    set({ purchaseOrders: data || [] })
+    return { success: true, data }
+  },
+
+  createPurchaseOrder: async (poData, items) => {
+    set({ loading: true, error: null })
+    const result = await procurementApi.createPurchaseOrder(poData, items)
+    if (result.error) {
+      set({ error: result.error.message || 'Failed to create PO', loading: false })
+      return { success: false, error: result.error.message || 'Failed to create PO' }
+    }
+    set(state => ({ purchaseOrders: [result.data, ...(state.purchaseOrders || [])], loading: false }))
+    return { success: true, data: result.data }
+  },
+
   convertPRToPO: async (prId) => {
-    const result = await procurementApi.createPurchaseOrderFromPR(prId)
+    const result = await procurementApi.convertPRToPO(prId)
     if (result.error) return { success: false, error: result.error.message }
     await get().fetchPurchaseRequisitions()
     return { success: true, data: result.data }
   },
 
+  receivePurchaseOrder: async (poId) => {
+    const result = await procurementApi.receivePurchaseOrder(poId)
+    return result
+  },
+
+  // Goods Receipt Actions
   fetchGoodsReceipts: async (filters = {}) => {
     const { data, error } = await procurementApi.getGoodsReceipts(filters)
     if (error) return { success: false }
-    set({ goodsReceipts: data })
+    set({ goodsReceipts: data || [] })
     return { success: true, data }
   },
 
   createGoodsReceipt: async (grData, items) => {
+    set({ loading: true, error: null })
     const result = await procurementApi.createGoodsReceipt(grData, items)
-    if (result.error) return { success: false }
-    set(state => ({ goodsReceipts: [result.data, ...state.goodsReceipts] }))
+    if (result.error) {
+      set({ error: result.error.message || 'Failed to create GR', loading: false })
+      return { success: false, error: result.error.message || 'Failed to create GR' }
+    }
+    set(state => ({ goodsReceipts: [result.data, ...(state.goodsReceipts || [])], loading: false }))
     return { success: true, data: result.data }
   },
 
+  // Budget Actions
   fetchBudgets: async () => {
     const { data, error } = await procurementApi.getBudgets()
     if (error) return { success: false }
-    set({ budgets: data })
+    set({ budgets: data || [] })
     return { success: true, data }
   },
 
+  // Evaluation Actions
   fetchEvaluations: async (vendorId = null) => {
     const { data, error } = await procurementApi.getVendorEvaluations(vendorId)
     if (error) return { success: false }
-    set({ evaluations: data })
+    set({ evaluations: data || [] })
     return { success: true, data }
   },
 
@@ -134,6 +193,7 @@ const useProcurementStore = create((set, get) => ({
     return { success: true, data }
   },
 
+  // Stats
   fetchProcurementStats: async () => {
     const stats = await procurementApi.getProcurementStats()
     set({ stats })
