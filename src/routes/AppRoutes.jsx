@@ -12,6 +12,7 @@ import PayrollRoutes from '../modules/payroll/routes/PayrollRoutes'
 import CRMRoutes from '../modules/crm/routes/CRMRoutes'
 import SalesRoutes from '../modules/sales/routes/SalesRoutes'
 import OperationsRoutes from '../modules/operations/routes/OperationsRoutes'
+import InventoryRoutes from '../modules/inventory/routes/InventoryRoutes'
 import { USER_ROLES } from '../types/authTypes'
 
 export default function AppRoutes() {
