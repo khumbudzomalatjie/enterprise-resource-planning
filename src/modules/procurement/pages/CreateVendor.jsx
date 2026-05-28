@@ -3,14 +3,19 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import Navbar from '../../../components/Navbar'
 import useProcurementStore from '../store/procurementStore'
+import useAuthStore from '../../../store/authStore'
 import useThemeStore from '../../../store/themeStore'
 import toast from 'react-hot-toast'
-import { Users, Save, ChevronRight } from 'lucide-react'
+import { Users, Save, ChevronRight, CheckCircle2 } from 'lucide-react'
 
 export default function CreateVendor() {
   const { createVendor } = useProcurementStore()
+  const { profile } = useAuthStore()
   const { isDark, toggleTheme } = useThemeStore()
   const navigate = useNavigate()
+
+  // Check if user can auto-approve vendors
+  const canAutoApprove = ['super_admin', 'operations_manager', 'finance_officer'].includes(profile?.role)
 
   const [vendorData, setVendorData] = useState({
     company_name: '',
@@ -37,7 +42,7 @@ export default function CreateVendor() {
     delivery_fee: 0,
     bbbee_level: 1,
     notes: '',
-    status: 'pending_approval'
+    status: canAutoApprove ? 'active' : 'pending_approval' // Auto-approve for managers
   })
 
   const handleSubmit = async (e) => {
@@ -51,7 +56,11 @@ export default function CreateVendor() {
     const result = await createVendor(vendorData)
     
     if (result.success) {
-      toast.success('Vendor created successfully!')
+      if (vendorData.status === 'active') {
+        toast.success('Vendor created and approved!')
+      } else {
+        toast.success('Vendor submitted for approval!')
+      }
       navigate('/procurement/vendors')
     } else {
       toast.error(result.error || 'Failed to create vendor')
@@ -74,6 +83,25 @@ export default function CreateVendor() {
           <h1 className="text-3xl font-bold text-slate-800 dark:text-white flex items-center gap-3 mb-8">
             <Users className="w-8 h-8 text-emerald-600" />Add New Vendor
           </h1>
+
+          {/* Approval Notice */}
+          {!canAutoApprove && (
+            <div className="neu-raised rounded-2xl p-4 mb-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+              <p className="text-amber-700 dark:text-amber-400 text-sm flex items-center gap-2">
+                <span>⚠️</span>
+                This vendor will require approval from an Operations Manager or Finance Officer before becoming active.
+              </p>
+            </div>
+          )}
+
+          {canAutoApprove && (
+            <div className="neu-raised rounded-2xl p-4 mb-6 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+              <p className="text-emerald-700 dark:text-emerald-400 text-sm flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4" />
+                Vendor will be automatically approved upon creation.
+              </p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Company Info */}
@@ -104,6 +132,14 @@ export default function CreateVendor() {
                 <div>
                   <label className="text-sm text-slate-500">Email *</label>
                   <input type="email" value={vendorData.email} onChange={(e) => setVendorData({...vendorData, email: e.target.value})} className="w-full p-3 neu-inset rounded-xl mt-1" required />
+                </div>
+                <div>
+                  <label className="text-sm text-slate-500">Registration Number</label>
+                  <input type="text" value={vendorData.registration_number} onChange={(e) => setVendorData({...vendorData, registration_number: e.target.value})} className="w-full p-3 neu-inset rounded-xl mt-1" />
+                </div>
+                <div>
+                  <label className="text-sm text-slate-500">Tax Number</label>
+                  <input type="text" value={vendorData.tax_number} onChange={(e) => setVendorData({...vendorData, tax_number: e.target.value})} className="w-full p-3 neu-inset rounded-xl mt-1" />
                 </div>
               </div>
             </div>
@@ -139,6 +175,10 @@ export default function CreateVendor() {
                   <label className="text-sm text-slate-500">Address Line 1</label>
                   <input type="text" value={vendorData.address_line1} onChange={(e) => setVendorData({...vendorData, address_line1: e.target.value})} className="w-full p-3 neu-inset rounded-xl mt-1" />
                 </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm text-slate-500">Address Line 2</label>
+                  <input type="text" value={vendorData.address_line2} onChange={(e) => setVendorData({...vendorData, address_line2: e.target.value})} className="w-full p-3 neu-inset rounded-xl mt-1" />
+                </div>
                 <div>
                   <label className="text-sm text-slate-500">City</label>
                   <input type="text" value={vendorData.city} onChange={(e) => setVendorData({...vendorData, city: e.target.value})} className="w-full p-3 neu-inset rounded-xl mt-1" />
@@ -163,6 +203,10 @@ export default function CreateVendor() {
                   <input type="text" value={vendorData.bank_account_number} onChange={(e) => setVendorData({...vendorData, bank_account_number: e.target.value})} className="w-full p-3 neu-inset rounded-xl mt-1" />
                 </div>
                 <div>
+                  <label className="text-sm text-slate-500">Branch Code</label>
+                  <input type="text" value={vendorData.bank_branch_code} onChange={(e) => setVendorData({...vendorData, bank_branch_code: e.target.value})} className="w-full p-3 neu-inset rounded-xl mt-1" />
+                </div>
+                <div>
                   <label className="text-sm text-slate-500">Payment Terms</label>
                   <select value={vendorData.payment_terms} onChange={(e) => setVendorData({...vendorData, payment_terms: e.target.value})} className="w-full p-3 neu-inset rounded-xl mt-1">
                     <option value="immediate">Immediate</option>
@@ -176,18 +220,53 @@ export default function CreateVendor() {
                 </div>
                 <div>
                   <label className="text-sm text-slate-500">Lead Time (Days)</label>
-                  <input type="number" value={vendorData.lead_time_days} onChange={(e) => setVendorData({...vendorData, lead_time_days: parseInt(e.target.value)})} className="w-full p-3 neu-inset rounded-xl mt-1" />
+                  <input type="number" value={vendorData.lead_time_days} onChange={(e) => setVendorData({...vendorData, lead_time_days: parseInt(e.target.value) || 0})} className="w-full p-3 neu-inset rounded-xl mt-1" />
                 </div>
                 <div>
-                  <label className="text-sm text-slate-500">Minimum Order Value</label>
-                  <input type="number" value={vendorData.minimum_order_value} onChange={(e) => setVendorData({...vendorData, minimum_order_value: parseFloat(e.target.value)})} className="w-full p-3 neu-inset rounded-xl mt-1" />
+                  <label className="text-sm text-slate-500">Minimum Order Value (ZAR)</label>
+                  <input type="number" value={vendorData.minimum_order_value} onChange={(e) => setVendorData({...vendorData, minimum_order_value: parseFloat(e.target.value) || 0})} className="w-full p-3 neu-inset rounded-xl mt-1" />
+                </div>
+                <div>
+                  <label className="text-sm text-slate-500">Delivery Fee (ZAR)</label>
+                  <input type="number" value={vendorData.delivery_fee} onChange={(e) => setVendorData({...vendorData, delivery_fee: parseFloat(e.target.value) || 0})} className="w-full p-3 neu-inset rounded-xl mt-1" />
                 </div>
                 <div>
                   <label className="text-sm text-slate-500">BBBEE Level (1-8)</label>
-                  <input type="number" min="1" max="8" value={vendorData.bbbee_level} onChange={(e) => setVendorData({...vendorData, bbbee_level: parseInt(e.target.value)})} className="w-full p-3 neu-inset rounded-xl mt-1" />
+                  <input type="number" min="1" max="8" value={vendorData.bbbee_level} onChange={(e) => setVendorData({...vendorData, bbbee_level: parseInt(e.target.value) || 1})} className="w-full p-3 neu-inset rounded-xl mt-1" />
                 </div>
               </div>
             </div>
+
+            {/* Status Selection for Admins */}
+            {canAutoApprove && (
+              <div className="neu-raised rounded-3xl p-6">
+                <h2 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Approval Status</h2>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="status" 
+                      value="active" 
+                      checked={vendorData.status === 'active'} 
+                      onChange={() => setVendorData({...vendorData, status: 'active'})} 
+                      className="w-4 h-4 text-emerald-600"
+                    />
+                    <span className="text-sm text-slate-700 dark:text-slate-300">Active (Approved)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="status" 
+                      value="pending_approval" 
+                      checked={vendorData.status === 'pending_approval'} 
+                      onChange={() => setVendorData({...vendorData, status: 'pending_approval'})} 
+                      className="w-4 h-4 text-amber-600"
+                    />
+                    <span className="text-sm text-slate-700 dark:text-slate-300">Pending Approval</span>
+                  </label>
+                </div>
+              </div>
+            )}
 
             {/* Notes */}
             <div className="neu-raised rounded-3xl p-6">
@@ -201,7 +280,8 @@ export default function CreateVendor() {
                 Cancel
               </button>
               <button type="submit" className="neu-raised neu-btn px-6 py-3 rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-2">
-                <Save className="w-5 h-5" /><span>Save Vendor</span>
+                <Save className="w-5 h-5" />
+                <span>Save Vendor</span>
               </button>
             </div>
           </form>
