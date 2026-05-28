@@ -34,16 +34,88 @@ export const crmApi = {
   },
 
   async createClient(clientData) {
-    console.log('API createClient called with:', clientData)
+    console.log('API createClient raw data:', clientData)
     
+    // Helper function to convert empty strings to null for UUID fields
+    const nullIfEmpty = (value) => {
+      if (value === '' || value === undefined || value === 'undefined' || value === null) {
+        return null
+      }
+      return value
+    }
+
+    // Build a clean object with only non-empty values
+    const cleanData = {}
+
+    // Only add fields that have values (not undefined, not empty string for non-text fields)
+    const fields = [
+      // String fields - can be empty string
+      'client_type', 'client_status', 'client_rating',
+      'company_name', 'trading_name', 'registration_number', 'tax_number', 'vat_number',
+      'industry', 'website',
+      'first_name', 'last_name', 'gender', 'nationality', 'id_number',
+      'contact_full_name', 'contact_position', 'contact_mobile', 'contact_email',
+      'email', 'phone', 'mobile', 'alternative_phone', 'whatsapp_number',
+      'preferred_contact_method',
+      'address_line1', 'address_line2', 'city', 'state', 'postal_code', 'country', 'postal_address',
+      'occupation', 'employer', 'work_address', 'work_phone',
+      'payment_terms', 'preferred_payment_method', 'currency', 'billing_cycle', 'billing_address',
+      'bank_name', 'bank_account_number', 'bank_branch_code',
+      'lead_source', 'pipeline_stage',
+      'accounts_contact', 'hr_contact', 'technical_contact', 'support_contact',
+      'products_purchased', 'services_subscribed', 'support_package', 'sla_details',
+      'notes', 'tags'
+    ]
+
+    // Add string fields
+    fields.forEach(field => {
+      if (clientData[field] !== undefined && clientData[field] !== null) {
+        cleanData[field] = clientData[field]
+      }
+    })
+
+    // Date fields - convert empty to null
+    const dateFields = ['date_of_birth', 'contract_start_date', 'contract_end_date', 'renewal_date', 'acquired_date']
+    dateFields.forEach(field => {
+      const value = nullIfEmpty(clientData[field])
+      if (value) cleanData[field] = value
+    })
+
+    // Numeric fields - convert empty/NaN to null
+    const numericFields = ['credit_limit', 'estimated_value', 'contract_value', 'annual_revenue']
+    numericFields.forEach(field => {
+      const value = clientData[field]
+      if (value !== undefined && value !== null && value !== '' && !isNaN(Number(value))) {
+        cleanData[field] = Number(value)
+      }
+    })
+
+    // Boolean fields
+    if (clientData['tax_exempt'] !== undefined) {
+      cleanData['tax_exempt'] = clientData['tax_exempt'] === true || clientData['tax_exempt'] === 'true'
+    }
+
+    // UUID fields - MUST be null if empty, never empty string
+    const uuidFields = ['assigned_to', 'account_manager_id', 'created_by']
+    uuidFields.forEach(field => {
+      const value = nullIfEmpty(clientData[field])
+      if (value && value !== '') {
+        cleanData[field] = value
+      }
+      // If empty, don't include the field at all - let database handle default
+    })
+
+    console.log('API createClient clean data:', cleanData)
+
     const { data, error } = await supabase
       .from('clients')
-      .insert([clientData])
+      .insert([cleanData])
       .select('*')
       .single()
 
     if (error) {
       console.error('API createClient error:', error)
+      console.error('Error details:', error.message, error.details, error.hint)
       return { data: null, error }
     }
     
@@ -52,9 +124,20 @@ export const crmApi = {
   },
 
   async updateClient(id, updates) {
+    // Clean UUID fields in updates too
+    const cleanUpdates = { ...updates }
+    
+    // Remove empty UUID fields
+    const uuidFields = ['assigned_to', 'account_manager_id', 'created_by']
+    uuidFields.forEach(field => {
+      if (cleanUpdates[field] === '' || cleanUpdates[field] === undefined) {
+        delete cleanUpdates[field]
+      }
+    })
+
     const { data, error } = await supabase
       .from('clients')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update({ ...cleanUpdates, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select('*')
       .single()
@@ -85,9 +168,15 @@ export const crmApi = {
   },
 
   async createContact(contactData) {
+    // Clean UUID fields
+    const cleanData = { ...contactData }
+    if (cleanData.client_id === '' || cleanData.client_id === undefined) {
+      delete cleanData.client_id
+    }
+
     const { data, error } = await supabase
       .from('client_contacts')
-      .insert([contactData])
+      .insert([cleanData])
       .select('*')
       .single()
     return { data, error }
@@ -119,9 +208,17 @@ export const crmApi = {
   },
 
   async createInteraction(interactionData) {
+    const cleanData = { ...interactionData }
+    const uuidFields = ['client_id', 'contact_id', 'attended_by', 'created_by']
+    uuidFields.forEach(field => {
+      if (cleanData[field] === '' || cleanData[field] === undefined) {
+        delete cleanData[field]
+      }
+    })
+
     const { data, error } = await supabase
       .from('client_interactions')
-      .insert([interactionData])
+      .insert([cleanData])
       .select('*')
       .single()
     return { data, error }
@@ -152,9 +249,17 @@ export const crmApi = {
   },
 
   async createClientService(serviceData) {
+    const cleanData = { ...serviceData }
+    const uuidFields = ['client_id', 'service_type_id', 'created_by']
+    uuidFields.forEach(field => {
+      if (cleanData[field] === '' || cleanData[field] === undefined) {
+        delete cleanData[field]
+      }
+    })
+
     const { data, error } = await supabase
       .from('client_services')
-      .insert([serviceData])
+      .insert([cleanData])
       .select('*')
       .single()
     return { data, error }
@@ -177,9 +282,17 @@ export const crmApi = {
   },
 
   async createPipelineItem(itemData) {
+    const cleanData = { ...itemData }
+    const uuidFields = ['client_id', 'assigned_to', 'created_by']
+    uuidFields.forEach(field => {
+      if (cleanData[field] === '' || cleanData[field] === undefined) {
+        delete cleanData[field]
+      }
+    })
+
     const { data, error } = await supabase
       .from('sales_pipeline')
-      .insert([itemData])
+      .insert([cleanData])
       .select('*')
       .single()
     return { data, error }
@@ -211,9 +324,17 @@ export const crmApi = {
   },
 
   async createFeedback(feedbackData) {
+    const cleanData = { ...feedbackData }
+    const uuidFields = ['client_id', 'resolved_by']
+    uuidFields.forEach(field => {
+      if (cleanData[field] === '' || cleanData[field] === undefined) {
+        delete cleanData[field]
+      }
+    })
+
     const { data, error } = await supabase
       .from('client_feedback')
-      .insert([feedbackData])
+      .insert([cleanData])
       .select('*')
       .single()
     return { data, error }
