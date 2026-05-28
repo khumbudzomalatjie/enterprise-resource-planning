@@ -27,8 +27,8 @@ import {
   Sparkles,
   Sun,
   Moon,
-  UserPlus,
-  Shield
+  Shield,
+  Wrench
 } from 'lucide-react'
 
 export default function Dashboard() {
@@ -36,7 +36,6 @@ export default function Dashboard() {
   const { isDark, toggleTheme } = useThemeStore()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('job')
-  const [logoError, setLogoError] = useState(false)
 
   const userName = profile?.full_name || user?.email?.split('@')[0] || 'User'
   const userRole = profile?.role
@@ -65,11 +64,25 @@ export default function Dashboard() {
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.FINANCE_OFFICER, USER_ROLES.HR_MANAGER]
     },
     { 
-      icon: Truck, 
-      label: 'Fleet Management', 
-      description: 'Vehicle tracking, maintenance',
-      path: '/fleet',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER]
+      icon: TrendingUp, 
+      label: 'CRM & Clients', 
+      description: 'Client management, pipeline',
+      path: '/crm',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SALES_AGENT]
+    },
+    { 
+      icon: FileText, 
+      label: 'Sales & Quotations', 
+      description: 'Quotes, invoices, A4 PDF',
+      path: '/sales',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SALES_AGENT, USER_ROLES.FINANCE_OFFICER]
+    },
+    { 
+      icon: Briefcase, 
+      label: 'Operations', 
+      description: 'Job management, scheduling',
+      path: '/operations',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SUPERVISOR]
     },
     { 
       icon: Package, 
@@ -81,9 +94,16 @@ export default function Dashboard() {
     { 
       icon: ShoppingCart, 
       label: 'Procurement', 
-      description: 'Purchase orders, vendors',
+      description: 'Purchase orders, vendors, RFQs',
       path: '/procurement',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.FINANCE_OFFICER]
+    },
+    { 
+      icon: Truck, 
+      label: 'Fleet Management', 
+      description: 'Vehicle tracking, maintenance',
+      path: '/fleet',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER]
     },
     { 
       icon: Landmark, 
@@ -93,25 +113,11 @@ export default function Dashboard() {
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.FINANCE_OFFICER]
     },
     { 
-      icon: TrendingUp, 
-      label: 'CRM & Clients', 
-      description: 'Client management, pipeline, services',
-      path: '/crm',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SALES_AGENT]
-    },
-    { 
       icon: Database, 
       label: 'Assets', 
       description: 'Depreciation, asset register',
       path: '/assets',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.FINANCE_OFFICER]
-    },
-    { 
-      icon: Briefcase, 
-      label: 'Operations', 
-      description: 'Job management, scheduling, routes',
-      path: '/operations',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SUPERVISOR]
     },
     { 
       icon: Smartphone, 
@@ -121,18 +127,18 @@ export default function Dashboard() {
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.CLEANER]
     },
     { 
-      icon: FileText, 
+      icon: BarChart3, 
       label: 'Reporting', 
       description: 'BI dashboards, export analytics',
       path: '/reports',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.FINANCE_OFFICER, USER_ROLES.HR_MANAGER]
     },
     { 
-      icon: TrendingUp, 
-      label: 'Sales', 
-      description: 'Quotations, invoices, payments',
-      path: '/sales',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.SALES_AGENT, USER_ROLES.FINANCE_OFFICER]
+      icon: Calendar, 
+      label: 'Events', 
+      description: 'Scheduling, logistics, tasks',
+      path: '/events',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER]
     },
     { 
       icon: FolderOpen, 
@@ -143,27 +149,29 @@ export default function Dashboard() {
     },
   ]
 
-  // Check if module is built and accessible
+  // Check which modules are built and accessible
   const isModuleBuilt = (module) => {
-    const builtModules = ['/hr', '/payroll', '/crm', '/sales', '/operations', '/inventory']
+    const builtModules = ['/hr', '/payroll', '/crm', '/sales', '/operations', '/inventory', '/procurement']
     return builtModules.includes(module.path)
   }
 
-  // Check if module is accessible by user role
   const isModuleAccessible = (module) => {
-    if (!module.roles || module.roles.length === 0) return true
     return module.roles.includes(userRole) || userRole === USER_ROLES.SUPER_ADMIN
   }
 
   const handleModuleClick = (module) => {
     // Check if user has permission
-    if (!isModuleAccessible(module)) {
+    const hasAccess = isModuleAccessible(module)
+    
+    if (!hasAccess) {
       toast.error(`You don't have access to ${module.label}`)
       return
     }
     
-    // Check if module is built
-    if (isModuleBuilt(module)) {
+    // Check if module route exists
+    const availableModules = ['/hr', '/payroll', '/crm', '/sales', '/operations', '/inventory', '/procurement', '/dashboard', '/users']
+    
+    if (availableModules.includes(module.path)) {
       navigate(module.path)
     } else {
       toast.success(`${module.label} module coming soon!`, {
@@ -302,11 +310,6 @@ export default function Dashboard() {
                         Coming Soon
                       </span>
                     )}
-                    {built && accessible && (
-                      <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                        Active
-                      </span>
-                    )}
                   </div>
                 </motion.div>
               )
@@ -346,10 +349,7 @@ export default function Dashboard() {
                   </h2>
                   <p className="text-3xl font-bold mt-2 text-slate-800 dark:text-white">12</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Residential · Commercial · Industrial</p>
-                  <button 
-                    onClick={() => navigate('/operations')}
-                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
-                  >
+                  <button className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md opacity-80 cursor-default">
                     View Details
                   </button>
                 </div>
@@ -392,10 +392,7 @@ export default function Dashboard() {
                   <TrendingUp className="w-8 h-8 text-emerald-600 mb-2" />
                   <p className="text-2xl font-bold mt-2 text-slate-800 dark:text-white">$189,450</p>
                   <p className="text-slate-500 dark:text-slate-400">Total Sales (YTD)</p>
-                  <button 
-                    onClick={() => navigate('/sales')}
-                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
-                  >
+                  <button className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md opacity-80 cursor-default">
                     Sales Report
                   </button>
                 </div>
@@ -404,10 +401,7 @@ export default function Dashboard() {
                   <Users className="w-8 h-8 text-emerald-600 mb-2" />
                   <p className="text-2xl font-bold mt-2 text-slate-800 dark:text-white">47</p>
                   <p className="text-slate-500 dark:text-slate-400">Active Clients</p>
-                  <button 
-                    onClick={() => navigate('/crm')}
-                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
-                  >
+                  <button className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md opacity-80 cursor-default">
                     CRM
                   </button>
                 </div>
@@ -416,10 +410,7 @@ export default function Dashboard() {
                   <DollarSign className="w-8 h-8 text-emerald-600 mb-2" />
                   <p className="text-2xl font-bold mt-2 text-slate-800 dark:text-white">$32,800</p>
                   <p className="text-slate-500 dark:text-slate-400">Pending Invoices</p>
-                  <button 
-                    onClick={() => navigate('/sales')}
-                    className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md hover:bg-emerald-600 transition-colors cursor-pointer"
-                  >
+                  <button className="mt-4 w-full py-2 rounded-xl bg-emerald-700 text-white text-sm shadow-md opacity-80 cursor-default">
                     Follow Up
                   </button>
                 </div>
