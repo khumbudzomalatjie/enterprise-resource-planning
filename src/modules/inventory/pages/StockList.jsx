@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import Navbar from '../../../components/Navbar'
 import useInventoryStore from '../store/inventoryStore'
 import useThemeStore from '../../../store/themeStore'
-import { Search, Package, Plus, Filter, ChevronRight } from 'lucide-react'
+import { Search, Package, Plus, Filter, ChevronRight, ArrowLeft, Sparkles, Sun, Moon } from 'lucide-react'
 
 export default function StockList() {
   const { items, fetchItems, fetchCategories, categories, loading } = useInventoryStore()
@@ -28,15 +28,28 @@ export default function StockList() {
   }
 
   const getStockStatus = (item) => {
-    if (item.current_stock <= 0) return { label: 'Out of Stock', color: 'bg-red-100 text-red-700' }
-    if (item.current_stock <= item.reorder_point) return { label: 'Low Stock', color: 'bg-amber-100 text-amber-700' }
-    if (item.current_stock <= item.minimum_stock) return { label: 'Below Min', color: 'bg-orange-100 text-orange-700' }
-    return { label: 'In Stock', color: 'bg-emerald-100 text-emerald-700' }
+    if (item.current_stock <= 0) return { label: 'Out of Stock', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' }
+    if (item.current_stock <= item.reorder_point) return { label: 'Low Stock', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' }
+    return { label: 'In Stock', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' }
+  }
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(amount || 0)
   }
 
   return (
     <div className={`min-h-screen font-['Inter'] transition-colors duration-300 ${isDark ? 'dark' : ''}`}>
       <Navbar />
+      <div className="fixed top-20 right-4 z-30 flex items-center gap-4">
+        <div className="neu-inset px-5 py-2 rounded-full flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <span className="text-sm font-semibold tracking-wide text-emerald-800 dark:text-emerald-200 hidden sm:inline">ERP</span>
+        </div>
+        <button onClick={toggleTheme} className="neu-raised neu-btn w-12 h-12 rounded-2xl flex items-center justify-center hover:scale-110">
+          {isDark ? <Sun className="w-6 h-6 text-amber-400" /> : <Moon className="w-6 h-6 text-slate-600" />}
+        </button>
+      </div>
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
         <div className="flex items-center gap-2 mb-6 text-sm">
           <Link to="/inventory" className="text-slate-500 hover:text-emerald-600">Inventory</Link>
@@ -54,11 +67,10 @@ export default function StockList() {
           </button>
         </motion.div>
 
-        {/* Filters */}
         <div className="neu-raised rounded-2xl p-4 mb-6 flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search items..." className="w-full pl-10 pr-4 py-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300" onKeyDown={(e) => e.key === 'Enter' && loadItems()} />
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, code, or barcode..." className="w-full pl-10 pr-4 py-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300" onKeyDown={(e) => e.key === 'Enter' && loadItems()} />
           </div>
           <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="px-4 py-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300">
             <option value="all">All Categories</option>
@@ -73,9 +85,16 @@ export default function StockList() {
           <button onClick={loadItems} className="neu-raised neu-btn px-6 py-3 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Search</button>
         </div>
 
-        {/* Items Grid */}
         {loading ? (
           <div className="text-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div><p className="text-slate-500">Loading items...</p></div>
+        ) : items.length === 0 ? (
+          <div className="text-center py-12 neu-raised rounded-3xl">
+            <Package className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+            <p className="text-slate-500 text-lg">No items found</p>
+            <button onClick={() => navigate('/inventory/items/new')} className="mt-4 neu-raised neu-btn px-6 py-3 rounded-2xl bg-emerald-600 text-white inline-flex items-center gap-2">
+              <Plus className="w-5 h-5" /><span>Add First Item</span>
+            </button>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {items.map((item, i) => {
@@ -99,9 +118,9 @@ export default function StockList() {
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div><span className="text-slate-500">Stock:</span> <span className="font-medium text-slate-800 dark:text-white">{item.current_stock} {item.unit}</span></div>
-                    <div><span className="text-slate-500">Category:</span> <span style={{color: item.item_categories?.color}}>{item.item_categories?.name}</span></div>
-                    <div><span className="text-slate-500">Cost:</span> <span className="font-medium">{new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(item.unit_cost)}</span></div>
-                    <div><span className="text-slate-500">Warehouse:</span> <span>{item.warehouses?.name || 'N/A'}</span></div>
+                    <div><span className="text-slate-500">Category:</span> <span style={{color: item.item_categories?.color}}>{item.item_categories?.name || 'N/A'}</span></div>
+                    <div><span className="text-slate-500">Cost:</span> <span className="font-medium">{formatCurrency(item.unit_cost)}</span></div>
+                    <div><span className="text-slate-500">Price:</span> <span>{formatCurrency(item.unit_price)}</span></div>
                   </div>
                 </motion.div>
               )
