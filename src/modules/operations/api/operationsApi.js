@@ -21,12 +21,35 @@ export const operationsApi = {
   },
 
   async getJob(id) {
+    console.log('API getJob called with id:', id)
+    
+    // First, get the job with basic relations
     const { data, error } = await supabase
       .from('jobs')
-      .select('*, clients(*), job_categories(*), teams(*), job_checklist_items(*), job_assignments(*, employees(first_name, last_name, employee_code)), quality_inspections(*)')
+      .select(`
+        *,
+        clients(*),
+        job_categories(*),
+        teams(*),
+        job_checklist_items(*),
+        job_assignments(*, employees(first_name, last_name, employee_code)),
+        quality_inspections(*)
+      `)
       .eq('id', id)
       .single()
-    return { data, error }
+
+    if (error) {
+      console.error('API getJob error:', error)
+      return { data: null, error }
+    }
+
+    if (!data) {
+      console.error('API getJob: No data found for id:', id)
+      return { data: null, error: { message: 'Job not found' } }
+    }
+
+    console.log('API getJob success:', data)
+    return { data, error: null }
   },
 
   async createJob(jobData) {
@@ -65,7 +88,7 @@ export const operationsApi = {
   async deleteJob(id) {
     const { error } = await supabase
       .from('jobs')
-      .update({ status: 'cancelled' })
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
       .eq('id', id)
     return { error }
   },
