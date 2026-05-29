@@ -12,16 +12,6 @@ export const documentsApi = {
     return { data, error }
   },
 
-  async updateFolder(id, updates) {
-    const { data, error } = await supabase.from('document_folders').update(updates).eq('id', id).select().single()
-    return { data, error }
-  },
-
-  async deleteFolder(id) {
-    const { error } = await supabase.from('document_folders').delete().eq('id', id)
-    return { error }
-  },
-
   // Documents
   async getDocuments(folderId = null, filters = {}) {
     let query = supabase.from('managed_documents').select('*, document_folders(folder_name)').neq('status', 'archived').order('updated_at', { ascending: false })
@@ -32,53 +22,77 @@ export const documentsApi = {
     return { data, error }
   },
 
-  async getDocument(id) {
-    const { data, error } = await supabase.from('managed_documents').select('*, document_versions(*), document_folders(*)').eq('id', id).single()
-    return { data, error }
-  },
+  async uploadDocument(file, metadata) {
+    try {
+      // Create unique file name
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
+      const filePath = `docs/${fileName}`
 
-  async createDocument(metadata) {
-    const { data, error } = await supabase.from('managed_documents').insert([metadata]).select().single()
-    return { data, error }
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        })
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError)
+        return { error: uploadError.message || 'Upload failed' }
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('documents')
+        .getPublicUrl(filePath)
+
+      // Save document record to database
+      const { data, error } = await supabase
+        .from('managed_documents')
+        .insert([{
+          document_name: metadata.document_name || file.name,
+          folder_id: metadata.folder_id || null,
+          document_type: metadata.document_type || 'other',
+          description: metadata.description || '',
+          file_url: publicUrl,
+          file_size: file.size,
+          file_type: file.type,
+          status: 'published'
+        }])
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Database error:', error)
+        return { error: error.message }
+      }
+
+      return { data }
+    } catch (error) {
+      console.error('Upload error:', error)
+      return { error: error.message || 'Upload failed' }
+    }
   },
 
   async updateDocument(id, updates) {
-    const { data, error } = await supabase.from('managed_documents').update(updates).eq('id', id).select().single()
+    const { data, error } = await supabase
+      .from('managed_documents')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
     return { data, error }
   },
 
-  async createDocumentVersion(documentId, file, changeNotes) {
-    const { data: doc } = await supabase.from('managed_documents').select('version_number').eq('id', documentId).single()
-    const newVersion = (doc?.version_number || 0) + 1
-
-    const fileExt = file.name.split('.').pop()
-    const fileName = `docs/versions/${documentId}-v${newVersion}.${fileExt}`
-    
-    await supabase.storage.from('documents').upload(fileName, file)
-    const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(fileName)
-
-    await supabase.from('document_versions').insert([{
-      document_id: documentId,
-      version_number: newVersion,
-      file_url: publicUrl,
-      file_size: file.size,
-      change_notes: changeNotes
-    }])
-
-    await supabase.from('managed_documents').update({ 
-      version_number: newVersion, 
-      file_url: publicUrl, 
-      updated_at: new Date().toISOString() 
-    }).eq('id', documentId)
-    
-    return { success: true }
-  },
-
   async deleteDocument(id) {
-    const { error } = await supabase.from('managed_documents').update({ 
-      status: 'archived',
-      updated_at: new Date().toISOString()
-    }).eq('id', id)
+    const { error } = await supabase
+      .from('managed_documents')
+      .update({ 
+        status: 'archived',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
     return { error }
   },
 
