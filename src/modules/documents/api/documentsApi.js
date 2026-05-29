@@ -1,6 +1,7 @@
 import { supabase } from '../../../lib/supabaseClient'
 
 export const documentsApi = {
+  // Folders
   async getFolders() {
     const { data, error } = await supabase.from('document_folders').select('*').order('folder_name')
     return { data, error }
@@ -11,8 +12,19 @@ export const documentsApi = {
     return { data, error }
   },
 
+  async updateFolder(id, updates) {
+    const { data, error } = await supabase.from('document_folders').update(updates).eq('id', id).select().single()
+    return { data, error }
+  },
+
+  async deleteFolder(id) {
+    const { error } = await supabase.from('document_folders').delete().eq('id', id)
+    return { error }
+  },
+
+  // Documents
   async getDocuments(folderId = null, filters = {}) {
-    let query = supabase.from('managed_documents').select('*, document_folders(folder_name)').order('updated_at', { ascending: false })
+    let query = supabase.from('managed_documents').select('*, document_folders(folder_name)').neq('status', 'archived').order('updated_at', { ascending: false })
     if (folderId) query = query.eq('folder_id', folderId)
     if (filters.type) query = query.eq('document_type', filters.type)
     if (filters.search) query = query.or(`document_name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
@@ -25,22 +37,13 @@ export const documentsApi = {
     return { data, error }
   },
 
-  async uploadDocument(file, metadata) {
-    const fileExt = file.name.split('.').pop()
-    const fileName = `docs/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
-    
-    const { data: uploadData, error: uploadError } = await supabase.storage.from('documents').upload(fileName, file)
-    if (uploadError) return { error: uploadError }
+  async createDocument(metadata) {
+    const { data, error } = await supabase.from('managed_documents').insert([metadata]).select().single()
+    return { data, error }
+  },
 
-    const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(fileName)
-
-    const { data, error } = await supabase.from('managed_documents').insert([{
-      ...metadata,
-      file_url: publicUrl,
-      file_size: file.size,
-      file_type: file.type
-    }]).select().single()
-
+  async updateDocument(id, updates) {
+    const { data, error } = await supabase.from('managed_documents').update(updates).eq('id', id).select().single()
     return { data, error }
   },
 
@@ -62,21 +65,29 @@ export const documentsApi = {
       change_notes: changeNotes
     }])
 
-    await supabase.from('managed_documents').update({ version_number: newVersion, file_url: publicUrl, updated_at: new Date() }).eq('id', documentId)
+    await supabase.from('managed_documents').update({ 
+      version_number: newVersion, 
+      file_url: publicUrl, 
+      updated_at: new Date().toISOString() 
+    }).eq('id', documentId)
+    
     return { success: true }
   },
 
   async deleteDocument(id) {
-    const { error } = await supabase.from('managed_documents').update({ status: 'archived' }).eq('id', id)
+    const { error } = await supabase.from('managed_documents').update({ 
+      status: 'archived',
+      updated_at: new Date().toISOString()
+    }).eq('id', id)
     return { error }
   },
 
   async getStats() {
     const [{ count: totalDocs }, { count: contracts }, { count: policies }, { count: sops }] = await Promise.all([
       supabase.from('managed_documents').select('*', { count: 'exact', head: true }).neq('status', 'archived'),
-      supabase.from('managed_documents').select('*', { count: 'exact', head: true }).eq('document_type', 'contract'),
-      supabase.from('managed_documents').select('*', { count: 'exact', head: true }).eq('document_type', 'policy'),
-      supabase.from('managed_documents').select('*', { count: 'exact', head: true }).eq('document_type', 'sop')
+      supabase.from('managed_documents').select('*', { count: 'exact', head: true }).eq('document_type', 'contract').neq('status', 'archived'),
+      supabase.from('managed_documents').select('*', { count: 'exact', head: true }).eq('document_type', 'policy').neq('status', 'archived'),
+      supabase.from('managed_documents').select('*', { count: 'exact', head: true }).eq('document_type', 'sop').neq('status', 'archived')
     ])
     return { totalDocs: totalDocs || 0, contracts: contracts || 0, policies: policies || 0, sops: sops || 0 }
   }
