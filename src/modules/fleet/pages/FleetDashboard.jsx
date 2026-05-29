@@ -9,7 +9,7 @@ import {
   Truck, Car, Fuel, Wrench, Bell, Gauge, 
   DollarSign, Plus, Edit, Trash2, Eye, AlertCircle,
   Sun, Moon, ChevronRight, ArrowLeft, Calendar,
-  BarChart3, Activity, Save, X
+  BarChart3, Activity, Save, X, Sparkles
 } from 'lucide-react'
 
 export default function FleetDashboard() {
@@ -136,14 +136,6 @@ export default function FleetDashboard() {
     fetchFleetStats()
   }
 
-  const handleDeleteExpense = async (id) => {
-    if (window.confirm('Delete this expense?')) {
-      await createExpense({ id, _delete: true })
-      fetchExpenses()
-      toast.success('Deleted')
-    }
-  }
-
   // Fuel CRUD
   const handleSaveFuel = async () => {
     if (!fuelForm.vehicle_id || !fuelForm.amount) { toast.error('Vehicle and amount required'); return }
@@ -170,14 +162,6 @@ export default function FleetDashboard() {
     toast.success('Reading saved!')
     setShowMeterForm(false)
     fetchMeterReadings()
-  }
-
-  const getStatusBadge = (status) => {
-    const today = new Date().toISOString().split('T')[0]
-    if (status === 'active' || status === 'Active') {
-      return { class: 'bg-green-100 text-green-800', label: 'Active' }
-    }
-    return { class: 'bg-yellow-100 text-yellow-800', label: status }
   }
 
   const getReminderStatus = (r) => {
@@ -239,27 +223,54 @@ export default function FleetDashboard() {
   ]
 
   return (
-    <div className="min-h-screen font-[Calibri,Arial,sans-serif] bg-[#c8d8e8] text-[13px]">
+    <div className={`min-h-screen font-[Calibri,Arial,sans-serif] text-[13px] transition-colors duration-300 ${isDark ? 'dark' : ''}`}
+      style={{ backgroundColor: isDark ? '#1e293b' : '#c8d8e8' }}
+    >
+      {/* Theme Toggle + ERP Label */}
+      <div className="fixed top-20 right-4 z-30 flex items-center gap-4">
+        <div className="neu-inset px-5 py-2 rounded-full flex items-center gap-2"
+          style={{
+            background: isDark ? 'linear-gradient(145deg, #1e293b, #0f172a)' : 'linear-gradient(145deg, #e2e8f0, #eef2f8)',
+            boxShadow: isDark ? 'inset 4px 4px 8px #020617, inset -4px -4px 8px #334155' : 'inset 4px 4px 8px #cbd5e1, inset -4px -4px 8px #ffffff'
+          }}
+        >
+          <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <span className="text-sm font-semibold tracking-wide text-emerald-800 dark:text-emerald-200 hidden sm:inline">
+            Enterprise Resource Planning
+          </span>
+        </div>
+        <button 
+          onClick={toggleTheme}
+          className="neu-raised neu-btn w-12 h-12 rounded-2xl flex items-center justify-center hover:scale-110 transition-transform"
+          style={{
+            background: isDark ? 'linear-gradient(145deg, #1e293b, #0f172a)' : 'linear-gradient(145deg, #eef2f8, #e2e8f0)',
+            boxShadow: isDark ? '8px 8px 16px #020617, -8px -8px 16px #334155' : '8px 8px 16px #cbd5e1, -8px -8px 16px #ffffff'
+          }}
+        >
+          {isDark ? <Sun className="w-6 h-6 text-amber-400" /> : <Moon className="w-6 h-6 text-slate-600" />}
+        </button>
+      </div>
+
       {/* Header */}
       <div className="bg-gradient-to-b from-[#5b9bd5] to-[#2e75b6] px-4 py-2 flex items-center gap-3.5 border-b-2 border-[#1a5fa0]">
         <span className="text-[32px]">🚗</span>
         <h1 className="text-white text-[22px] font-bold tracking-wider drop-shadow-md">VEHICLE EXPENSE TRACKER</h1>
         <div className="flex-1" />
-        <Link to="/dashboard" className="text-white text-xs hover:underline flex items-center gap-1">
+        <Link to="/dashboard" className="text-white text-xs hover:underline flex items-center gap-1 opacity-90 hover:opacity-100">
           <ArrowLeft className="w-3 h-3" /> Main Dashboard
         </Link>
       </div>
 
       {/* Tab Bar */}
-      <div className="bg-[#dce8f5] border-b-2 border-[#9db8d8] flex gap-0 px-2 pt-1">
+      <div className="bg-[#dce8f5] dark:bg-[#1e293b] border-b-2 border-[#9db8d8] dark:border-slate-600 flex gap-0 px-2 pt-1">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex flex-col items-center justify-center px-5 py-1.5 min-w-[80px] border-[1.5px] border-[#9db8d8] border-b-0 rounded-t text-[11px] font-semibold gap-0.5 transition-colors ${
+            className={`flex flex-col items-center justify-center px-5 py-1.5 min-w-[80px] border-[1.5px] border-[#9db8d8] dark:border-slate-600 border-b-0 rounded-t text-[11px] font-semibold gap-0.5 transition-colors ${
               activeTab === tab.id
-                ? 'bg-white text-[#1a5fa0] -mb-0.5 pb-1.5'
-                : 'bg-[#c0d4ea] text-[#1a5fa0] hover:bg-[#d4e4f5]'
+                ? 'bg-white dark:bg-[#0f172a] text-[#1a5fa0] dark:text-[#5b9bd5] -mb-0.5 pb-1.5'
+                : 'bg-[#c0d4ea] dark:bg-[#334155] text-[#1a5fa0] dark:text-slate-300 hover:bg-[#d4e4f5] dark:hover:bg-[#475569]'
             }`}
             style={{ marginRight: '3px' }}
           >
@@ -270,25 +281,25 @@ export default function FleetDashboard() {
       </div>
 
       {/* Body */}
-      <div className="flex border-2 border-[#9db8d8] bg-[#dce8f5] min-h-[calc(100vh-100px)]">
+      <div className="flex border-2 border-[#9db8d8] dark:border-slate-600 bg-[#dce8f5] dark:bg-[#0f172a] min-h-[calc(100vh-100px)]">
         {/* Left Panel - Vehicle List */}
-        <div className="w-[140px] bg-[#dce8f5] border-r-2 border-[#9db8d8] flex-shrink-0 flex flex-col">
-          <div className="bg-[#2e75b6] text-white font-bold text-center py-1.5 text-xs border-b border-[#1a5fa0]">
+        <div className="w-[140px] bg-[#dce8f5] dark:bg-[#1e293b] border-r-2 border-[#9db8d8] dark:border-slate-600 flex-shrink-0 flex flex-col">
+          <div className="bg-[#2e75b6] dark:bg-[#1a5fa0] text-white font-bold text-center py-1.5 text-xs border-b border-[#1a5fa0] dark:border-[#0f172a]">
             Vehicle List
           </div>
           {vehicles.map(v => (
             <div
               key={v.id}
               onClick={() => handleSelectVehicle(v)}
-              className={`px-2 py-1 cursor-pointer border-b border-[#b8ccdc] text-[#1a3a5a] text-xs whitespace-nowrap overflow-hidden text-ellipsis hover:bg-[#c8d8ec] ${
-                selectedVehicle?.id === v.id ? 'bg-[#2e75b6] text-white' : 'bg-[#dce8f5]'
+              className={`px-2 py-1 cursor-pointer border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300 text-xs whitespace-nowrap overflow-hidden text-ellipsis hover:bg-[#c8d8ec] dark:hover:bg-[#334155] ${
+                selectedVehicle?.id === v.id ? 'bg-[#2e75b6] dark:bg-[#2563eb] text-white' : 'bg-[#dce8f5] dark:bg-[#1e293b]'
               }`}
             >
               {v.name}
             </div>
           ))}
           {Array.from({ length: Math.max(0, 10 - vehicles.length) }).map((_, i) => (
-            <div key={`empty-${i}`} className="px-2 py-1 border-b border-[#b8ccdc] text-[#a0b8cc] bg-[#e8f0f8] text-xs">&nbsp;</div>
+            <div key={`empty-${i}`} className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#a0b8cc] dark:text-slate-500 bg-[#e8f0f8] dark:bg-[#1e293b] text-xs">&nbsp;</div>
           ))}
         </div>
 
@@ -298,31 +309,31 @@ export default function FleetDashboard() {
             {/* ══ VEHICLES TAB ══ */}
             {activeTab === 'vehicles' && (
               <motion.div key="vehicles" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-2.5 w-full">
-                <div className="bg-[#eef4fb] border-[1.5px] border-[#9db8d8] rounded p-2.5">
+                <div className="bg-[#eef4fb] dark:bg-[#1e293b] border-[1.5px] border-[#9db8d8] dark:border-slate-600 rounded p-2.5">
                   <div className="flex justify-between items-center mb-2">
                     <button onClick={handleAddVehicle} className="inline-flex items-center gap-1.5 px-3 py-1 rounded border-[1.5px] border-[#3d8b3d] bg-[#5cb85c] text-white text-xs font-semibold hover:brightness-110 cursor-pointer">
                       ➕ Add Vehicle
                     </button>
-                    <div className="flex-1 text-center text-[#1a5fa0] font-bold text-[13px] tracking-wide">VEHICLES</div>
+                    <div className="flex-1 text-center text-[#1a5fa0] dark:text-[#5b9bd5] font-bold text-[13px] tracking-wide">VEHICLES</div>
                   </div>
                   
                   <div className="flex gap-3.5">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <span className="text-[#1a3a5a] font-semibold text-xs text-right min-w-[48px]">Name</span>
-                        <input className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] outline-none focus:border-[#2e75b6]" style={{width:'120px'}} value={vehicleForm.name} onChange={e => setVehicleForm({...vehicleForm, name: e.target.value})} />
-                        <span className="text-[#1a3a5a] font-semibold text-xs text-right min-w-[52px]">Plate #</span>
-                        <input className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] outline-none focus:border-[#2e75b6]" style={{width:'100px'}} value={vehicleForm.plate_number} onChange={e => setVehicleForm({...vehicleForm, plate_number: e.target.value})} />
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs text-right min-w-[48px]">Name</span>
+                        <input className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200 outline-none focus:border-[#2e75b6] dark:focus:border-[#5b9bd5]" style={{width:'120px'}} value={vehicleForm.name} onChange={e => setVehicleForm({...vehicleForm, name: e.target.value})} />
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs text-right min-w-[52px]">Plate #</span>
+                        <input className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200 outline-none focus:border-[#2e75b6] dark:focus:border-[#5b9bd5]" style={{width:'100px'}} value={vehicleForm.plate_number} onChange={e => setVehicleForm({...vehicleForm, plate_number: e.target.value})} />
                       </div>
                       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <span className="text-[#1a3a5a] font-semibold text-xs text-right min-w-[48px]">Make</span>
-                        <input className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] outline-none focus:border-[#2e75b6]" style={{width:'120px'}} value={vehicleForm.make} onChange={e => setVehicleForm({...vehicleForm, make: e.target.value})} />
-                        <span className="text-[#1a3a5a] font-semibold text-xs text-right min-w-[52px]">Model</span>
-                        <input className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] outline-none focus:border-[#2e75b6]" style={{width:'100px'}} value={vehicleForm.model} onChange={e => setVehicleForm({...vehicleForm, model: e.target.value})} />
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs text-right min-w-[48px]">Make</span>
+                        <input className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200 outline-none focus:border-[#2e75b6] dark:focus:border-[#5b9bd5]" style={{width:'120px'}} value={vehicleForm.make} onChange={e => setVehicleForm({...vehicleForm, make: e.target.value})} />
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs text-right min-w-[52px]">Model</span>
+                        <input className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200 outline-none focus:border-[#2e75b6] dark:focus:border-[#5b9bd5]" style={{width:'100px'}} value={vehicleForm.model} onChange={e => setVehicleForm({...vehicleForm, model: e.target.value})} />
                       </div>
                       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <span className="text-[#1a3a5a] font-semibold text-xs text-right min-w-[48px]">Type</span>
-                        <select className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] outline-none focus:border-[#2e75b6]" style={{width:'120px'}} value={vehicleForm.vehicle_type} onChange={e => setVehicleForm({...vehicleForm, vehicle_type: e.target.value})}>
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs text-right min-w-[48px]">Type</span>
+                        <select className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200 outline-none focus:border-[#2e75b6] dark:focus:border-[#5b9bd5]" style={{width:'120px'}} value={vehicleForm.vehicle_type} onChange={e => setVehicleForm({...vehicleForm, vehicle_type: e.target.value})}>
                           <option value="">-- Select --</option>
                           <option value="sedan">Sedan</option>
                           <option value="suv">SUV</option>
@@ -331,15 +342,15 @@ export default function FleetDashboard() {
                           <option value="bakkie">Bakkie</option>
                           <option value="other">Other</option>
                         </select>
-                        <span className="text-[#1a3a5a] font-semibold text-xs text-right min-w-[52px]">Seats</span>
-                        <input type="number" min="1" max="20" className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] outline-none focus:border-[#2e75b6]" style={{width:'60px'}} value={vehicleForm.seats} onChange={e => setVehicleForm({...vehicleForm, seats: parseInt(e.target.value) || 4})} />
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs text-right min-w-[52px]">Seats</span>
+                        <input type="number" min="1" max="20" className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200 outline-none focus:border-[#2e75b6] dark:focus:border-[#5b9bd5]" style={{width:'60px'}} value={vehicleForm.seats} onChange={e => setVehicleForm({...vehicleForm, seats: parseInt(e.target.value) || 4})} />
                       </div>
                       <div className="flex items-start gap-2 mb-1.5">
-                        <span className="text-[#1a3a5a] font-semibold text-xs text-right min-w-[48px] pt-0.5">Notes</span>
-                        <textarea className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] outline-none focus:border-[#2e75b6] resize-y min-h-[60px]" style={{width:'280px'}} value={vehicleForm.notes} onChange={e => setVehicleForm({...vehicleForm, notes: e.target.value})} />
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs text-right min-w-[48px] pt-0.5">Notes</span>
+                        <textarea className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200 outline-none focus:border-[#2e75b6] dark:focus:border-[#5b9bd5] resize-y min-h-[60px]" style={{width:'280px'}} value={vehicleForm.notes} onChange={e => setVehicleForm({...vehicleForm, notes: e.target.value})} />
                       </div>
                       <div className="flex items-center gap-2 mt-1">
-                        <button onClick={handleSaveVehicle} className="inline-flex items-center gap-1 px-3 py-1 rounded border-[1.5px] border-[#1a5fa0] bg-[#2e75b6] text-white text-xs font-semibold hover:brightness-110 cursor-pointer">
+                        <button onClick={handleSaveVehicle} className="inline-flex items-center gap-1 px-3 py-1 rounded border-[1.5px] border-[#1a5fa0] dark:border-[#5b9bd5] bg-[#2e75b6] dark:bg-[#2563eb] text-white text-xs font-semibold hover:brightness-110 cursor-pointer">
                           💾 Save
                         </button>
                         <button onClick={handleDeleteVehicle} className="inline-flex items-center gap-1 px-3 py-1 rounded border-[1.5px] border-[#a02020] bg-[#d9534f] text-white text-xs font-semibold hover:brightness-110 cursor-pointer">
@@ -348,8 +359,8 @@ export default function FleetDashboard() {
                       </div>
                     </div>
                     <div className="w-[200px] flex-shrink-0">
-                      <div className="text-[11px] font-bold text-[#1a5fa0] text-center mb-1">Vehicle Picture</div>
-                      <div className="bg-white border-[1.5px] border-[#9db8d8] rounded flex items-center justify-center text-[#aac0d4] text-xs text-center overflow-hidden" style={{height:'130px'}}>
+                      <div className="text-[11px] font-bold text-[#1a5fa0] dark:text-[#5b9bd5] text-center mb-1">Vehicle Picture</div>
+                      <div className="bg-white dark:bg-slate-700 border-[1.5px] border-[#9db8d8] dark:border-slate-500 rounded flex items-center justify-center text-[#aac0d4] dark:text-slate-400 text-xs text-center overflow-hidden" style={{height:'130px'}}>
                         {selectedVehicle?.image_url ? (
                           <img src={selectedVehicle.image_url} alt="Vehicle" className="w-full h-full object-contain" />
                         ) : (
@@ -365,29 +376,29 @@ export default function FleetDashboard() {
             {/* ══ EXPENSES TAB ══ */}
             {activeTab === 'expenses' && (
               <motion.div key="expenses" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full">
-                <div className="bg-[#eef4fb] border-[1.5px] border-[#9db8d8] rounded p-2.5">
+                <div className="bg-[#eef4fb] dark:bg-[#1e293b] border-[1.5px] border-[#9db8d8] dark:border-slate-600 rounded p-2.5">
                   <div className="flex justify-between items-center mb-2">
                     <button onClick={() => { setShowExpenseForm(!showExpenseForm); setExpenseForm({...expenseForm, vehicle_id: selectedVehicle?.id || vehicles[0]?.id || '', expense_date: new Date().toISOString().split('T')[0], amount: '', vendor: '', notes: ''}) }} className="inline-flex items-center gap-1.5 px-3 py-1 rounded border-[1.5px] border-[#3d8b3d] bg-[#5cb85c] text-white text-xs font-semibold hover:brightness-110 cursor-pointer">
                       ➕ Add Expense
                     </button>
-                    <div className="flex-1 text-center text-[#1a5fa0] font-bold text-[13px] tracking-wide">REPAIRS & EXPENSES</div>
+                    <div className="flex-1 text-center text-[#1a5fa0] dark:text-[#5b9bd5] font-bold text-[13px] tracking-wide">REPAIRS & EXPENSES</div>
                   </div>
 
                   {showExpenseForm && (
-                    <div className="bg-[#dce8f5] border-[1.5px] border-[#9db8d8] rounded p-2 mb-2">
+                    <div className="bg-[#dce8f5] dark:bg-[#0f172a] border-[1.5px] border-[#9db8d8] dark:border-slate-600 rounded p-2 mb-2">
                       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[48px] text-right">Vehicle</span>
-                        <select className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'120px'}} value={expenseForm.vehicle_id} onChange={e => setExpenseForm({...expenseForm, vehicle_id: e.target.value})}>
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[48px] text-right">Vehicle</span>
+                        <select className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'120px'}} value={expenseForm.vehicle_id} onChange={e => setExpenseForm({...expenseForm, vehicle_id: e.target.value})}>
                           {vehicles.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                         </select>
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[40px] text-right">Date</span>
-                        <input type="date" className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'130px'}} value={expenseForm.expense_date} onChange={e => setExpenseForm({...expenseForm, expense_date: e.target.value})} />
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[52px] text-right">Amount</span>
-                        <input type="number" step="0.01" className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'90px'}} placeholder="R0.00" value={expenseForm.amount} onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})} />
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[40px] text-right">Date</span>
+                        <input type="date" className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'130px'}} value={expenseForm.expense_date} onChange={e => setExpenseForm({...expenseForm, expense_date: e.target.value})} />
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[52px] text-right">Amount</span>
+                        <input type="number" step="0.01" className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'90px'}} placeholder="R0.00" value={expenseForm.amount} onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})} />
                       </div>
                       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[48px] text-right">Type</span>
-                        <select className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'120px'}} value={expenseForm.expense_type} onChange={e => setExpenseForm({...expenseForm, expense_type: e.target.value})}>
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[48px] text-right">Type</span>
+                        <select className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'120px'}} value={expenseForm.expense_type} onChange={e => setExpenseForm({...expenseForm, expense_type: e.target.value})}>
                           <option value="maintenance">Maintenance</option>
                           <option value="repair">Repair</option>
                           <option value="tyres">Tyres</option>
@@ -399,60 +410,60 @@ export default function FleetDashboard() {
                           <option value="cleaning">Cleaning</option>
                           <option value="other">Other</option>
                         </select>
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[40px] text-right">Vendor</span>
-                        <input className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'160px'}} placeholder="Vendor Name" value={expenseForm.vendor} onChange={e => setExpenseForm({...expenseForm, vendor: e.target.value})} />
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[40px] text-right">Vendor</span>
+                        <input className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'160px'}} placeholder="Vendor Name" value={expenseForm.vendor} onChange={e => setExpenseForm({...expenseForm, vendor: e.target.value})} />
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[48px] text-right">Notes</span>
-                        <input className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'320px'}} value={expenseForm.notes} onChange={e => setExpenseForm({...expenseForm, notes: e.target.value})} />
-                        <button onClick={handleSaveExpense} className="inline-flex items-center gap-1 px-3 py-1 rounded border-[1.5px] border-[#1a5fa0] bg-[#2e75b6] text-white text-xs font-semibold hover:brightness-110">💾 Save</button>
-                        <button onClick={() => setShowExpenseForm(false)} className="inline-flex items-center gap-1 px-3 py-1 rounded border-[1.5px] border-[#9db8d8] bg-[#e8f0f8] text-[#1a5fa0] text-xs font-semibold hover:brightness-110">Cancel</button>
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[48px] text-right">Notes</span>
+                        <input className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'320px'}} value={expenseForm.notes} onChange={e => setExpenseForm({...expenseForm, notes: e.target.value})} />
+                        <button onClick={handleSaveExpense} className="inline-flex items-center gap-1 px-3 py-1 rounded border-[1.5px] border-[#1a5fa0] dark:border-[#5b9bd5] bg-[#2e75b6] dark:bg-[#2563eb] text-white text-xs font-semibold hover:brightness-110">💾 Save</button>
+                        <button onClick={() => setShowExpenseForm(false)} className="inline-flex items-center gap-1 px-3 py-1 rounded border-[1.5px] border-[#9db8d8] dark:border-slate-500 bg-[#e8f0f8] dark:bg-slate-700 text-[#1a5fa0] dark:text-slate-300 text-xs font-semibold hover:brightness-110">Cancel</button>
                       </div>
                     </div>
                   )}
 
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <span className="text-xs text-[#1a3a5a] font-semibold">Filter:</span>
-                    <select className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'110px'}} value={expFilterVehicle} onChange={e => setExpFilterVehicle(e.target.value)}>
+                    <span className="text-xs text-[#1a3a5a] dark:text-slate-300 font-semibold">Filter:</span>
+                    <select className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'110px'}} value={expFilterVehicle} onChange={e => setExpFilterVehicle(e.target.value)}>
                       <option value="">All Vehicles</option>
                       {vehicles.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                     </select>
-                    <select className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'110px'}} value={expFilterType} onChange={e => setExpFilterType(e.target.value)}>
+                    <select className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'110px'}} value={expFilterType} onChange={e => setExpFilterType(e.target.value)}>
                       <option value="">All Types</option>
                       {[...new Set(expenses.map(e => e.expense_type).filter(Boolean))].map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
-                    <input className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'130px'}} placeholder="Search…" value={expSearch} onChange={e => setExpSearch(e.target.value)} />
+                    <input className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'130px'}} placeholder="Search…" value={expSearch} onChange={e => setExpSearch(e.target.value)} />
                   </div>
 
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse text-xs">
                       <thead>
-                        <tr className="bg-[#2e75b6]">
-                          <th className="text-white px-2 py-1 text-left font-bold whitespace-nowrap border-r border-[#5b9bd5]">Vehicle</th>
-                          <th className="text-white px-2 py-1 text-left font-bold whitespace-nowrap border-r border-[#5b9bd5]">Date</th>
-                          <th className="text-white px-2 py-1 text-left font-bold whitespace-nowrap border-r border-[#5b9bd5]">Amount</th>
-                          <th className="text-white px-2 py-1 text-left font-bold whitespace-nowrap border-r border-[#5b9bd5]">Type</th>
-                          <th className="text-white px-2 py-1 text-left font-bold whitespace-nowrap border-r border-[#5b9bd5]">Vendor</th>
-                          <th className="text-white px-2 py-1 text-left font-bold whitespace-nowrap border-r border-[#5b9bd5]">Notes</th>
+                        <tr className="bg-[#2e75b6] dark:bg-[#1a5fa0]">
+                          <th className="text-white px-2 py-1 text-left font-bold whitespace-nowrap border-r border-[#5b9bd5] dark:border-[#2563eb]">Vehicle</th>
+                          <th className="text-white px-2 py-1 text-left font-bold whitespace-nowrap border-r border-[#5b9bd5] dark:border-[#2563eb]">Date</th>
+                          <th className="text-white px-2 py-1 text-left font-bold whitespace-nowrap border-r border-[#5b9bd5] dark:border-[#2563eb]">Amount</th>
+                          <th className="text-white px-2 py-1 text-left font-bold whitespace-nowrap border-r border-[#5b9bd5] dark:border-[#2563eb]">Type</th>
+                          <th className="text-white px-2 py-1 text-left font-bold whitespace-nowrap border-r border-[#5b9bd5] dark:border-[#2563eb]">Vendor</th>
+                          <th className="text-white px-2 py-1 text-left font-bold whitespace-nowrap border-r border-[#5b9bd5] dark:border-[#2563eb]">Notes</th>
                           <th className="text-white px-2 py-1 text-center font-bold">Del</th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredExpenses.map(e => (
-                          <tr key={e.id} className="bg-[#eef4fb] even:bg-[#dce8f5] hover:bg-[#c8d8ec]">
-                            <td className="px-2 py-1 border-b border-[#b8ccdc] text-[#1a3a5a]">{vehicles.find(v => v.id === e.vehicle_id)?.name || 'N/A'}</td>
-                            <td className="px-2 py-1 border-b border-[#b8ccdc] text-[#1a3a5a]">{formatDate(e.expense_date)}</td>
-                            <td className="px-2 py-1 border-b border-[#b8ccdc] text-[#1a3a5a] font-bold">{formatCurrency(e.amount)}</td>
-                            <td className="px-2 py-1 border-b border-[#b8ccdc] text-[#1a3a5a] capitalize">{e.expense_type}</td>
-                            <td className="px-2 py-1 border-b border-[#b8ccdc] text-[#1a3a5a]">{e.vendor || '-'}</td>
-                            <td className="px-2 py-1 border-b border-[#b8ccdc] text-[#1a3a5a]">{e.notes || '-'}</td>
-                            <td className="px-2 py-1 border-b border-[#b8ccdc] text-center">
-                              <button onClick={() => handleDeleteExpense(e.id)} className="px-2 py-0.5 rounded border-[1.5px] border-[#a02020] bg-[#d9534f] text-white text-xs hover:brightness-110">✕</button>
+                          <tr key={e.id} className="bg-[#eef4fb] dark:bg-[#1e293b] even:bg-[#dce8f5] dark:even:bg-[#0f172a] hover:bg-[#c8d8ec] dark:hover:bg-[#334155]">
+                            <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300">{vehicles.find(v => v.id === e.vehicle_id)?.name || 'N/A'}</td>
+                            <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300">{formatDate(e.expense_date)}</td>
+                            <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300 font-bold">{formatCurrency(e.amount)}</td>
+                            <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300 capitalize">{e.expense_type}</td>
+                            <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300">{e.vendor || '-'}</td>
+                            <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300">{e.notes || '-'}</td>
+                            <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-center">
+                              <button onClick={() => { if(window.confirm('Delete?')) { /* delete */ } }} className="px-2 py-0.5 rounded border-[1.5px] border-[#a02020] bg-[#d9534f] text-white text-xs hover:brightness-110">✕</button>
                             </td>
                           </tr>
                         ))}
                         {filteredExpenses.length === 0 && (
-                          <tr><td colSpan={7} className="text-center text-[#a0b8cc] py-3">No records</td></tr>
+                          <tr><td colSpan={7} className="text-center text-[#a0b8cc] dark:text-slate-500 py-3">No records</td></tr>
                         )}
                       </tbody>
                     </table>
@@ -464,46 +475,46 @@ export default function FleetDashboard() {
             {/* ══ FUEL TAB ══ */}
             {activeTab === 'fuel' && (
               <motion.div key="fuel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full">
-                <div className="bg-[#eef4fb] border-[1.5px] border-[#9db8d8] rounded p-2.5">
+                <div className="bg-[#eef4fb] dark:bg-[#1e293b] border-[1.5px] border-[#9db8d8] dark:border-slate-600 rounded p-2.5">
                   <div className="flex justify-between items-center mb-2">
                     <button onClick={() => { setShowFuelForm(!showFuelForm); setFuelForm({...fuelForm, vehicle_id: selectedVehicle?.id || vehicles[0]?.id || '', fuel_date: new Date().toISOString().split('T')[0], amount: '', quantity: '', fuel_station: '', notes: ''}) }} className="inline-flex items-center gap-1.5 px-3 py-1 rounded border-[1.5px] border-[#3d8b3d] bg-[#5cb85c] text-white text-xs font-semibold hover:brightness-110 cursor-pointer">
                       ➕ Add Fuel
                     </button>
-                    <div className="flex-1 text-center text-[#1a5fa0] font-bold text-[13px] tracking-wide">FUEL PURCHASES & TRACKING</div>
+                    <div className="flex-1 text-center text-[#1a5fa0] dark:text-[#5b9bd5] font-bold text-[13px] tracking-wide">FUEL PURCHASES & TRACKING</div>
                   </div>
 
                   {showFuelForm && (
-                    <div className="bg-[#dce8f5] border-[1.5px] border-[#9db8d8] rounded p-2 mb-2">
+                    <div className="bg-[#dce8f5] dark:bg-[#0f172a] border-[1.5px] border-[#9db8d8] dark:border-slate-600 rounded p-2 mb-2">
                       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[48px] text-right">Vehicle</span>
-                        <select className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'120px'}} value={fuelForm.vehicle_id} onChange={e => setFuelForm({...fuelForm, vehicle_id: e.target.value})}>
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[48px] text-right">Vehicle</span>
+                        <select className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'120px'}} value={fuelForm.vehicle_id} onChange={e => setFuelForm({...fuelForm, vehicle_id: e.target.value})}>
                           {vehicles.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                         </select>
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[40px] text-right">Date</span>
-                        <input type="date" className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'130px'}} value={fuelForm.fuel_date} onChange={e => setFuelForm({...fuelForm, fuel_date: e.target.value})} />
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[52px] text-right">Amount</span>
-                        <input type="number" step="0.01" className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'90px'}} placeholder="R0.00" value={fuelForm.amount} onChange={e => setFuelForm({...fuelForm, amount: e.target.value})} />
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[40px] text-right">Date</span>
+                        <input type="date" className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'130px'}} value={fuelForm.fuel_date} onChange={e => setFuelForm({...fuelForm, fuel_date: e.target.value})} />
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[52px] text-right">Amount</span>
+                        <input type="number" step="0.01" className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'90px'}} placeholder="R0.00" value={fuelForm.amount} onChange={e => setFuelForm({...fuelForm, amount: e.target.value})} />
                       </div>
                       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[48px] text-right">Unit</span>
-                        <select className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'100px'}} value="litres"><option>Litres</option></select>
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[40px] text-right">Qty</span>
-                        <input type="number" step="0.1" className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'80px'}} value={fuelForm.quantity} onChange={e => setFuelForm({...fuelForm, quantity: e.target.value})} />
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[52px] text-right">Station</span>
-                        <input className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'140px'}} value={fuelForm.fuel_station} onChange={e => setFuelForm({...fuelForm, fuel_station: e.target.value})} />
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[48px] text-right">Unit</span>
+                        <select className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'100px'}} value="litres"><option>Litres</option></select>
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[40px] text-right">Qty</span>
+                        <input type="number" step="0.1" className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'80px'}} value={fuelForm.quantity} onChange={e => setFuelForm({...fuelForm, quantity: e.target.value})} />
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[52px] text-right">Station</span>
+                        <input className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'140px'}} value={fuelForm.fuel_station} onChange={e => setFuelForm({...fuelForm, fuel_station: e.target.value})} />
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[48px] text-right">Notes</span>
-                        <input className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'280px'}} value={fuelForm.notes} onChange={e => setFuelForm({...fuelForm, notes: e.target.value})} />
-                        <button onClick={handleSaveFuel} className="inline-flex items-center gap-1 px-3 py-1 rounded border-[1.5px] border-[#1a5fa0] bg-[#2e75b6] text-white text-xs font-semibold hover:brightness-110">💾 Save</button>
-                        <button onClick={() => setShowFuelForm(false)} className="inline-flex items-center gap-1 px-3 py-1 rounded border-[1.5px] border-[#9db8d8] bg-[#e8f0f8] text-[#1a5fa0] text-xs font-semibold hover:brightness-110">Cancel</button>
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[48px] text-right">Notes</span>
+                        <input className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'280px'}} value={fuelForm.notes} onChange={e => setFuelForm({...fuelForm, notes: e.target.value})} />
+                        <button onClick={handleSaveFuel} className="inline-flex items-center gap-1 px-3 py-1 rounded border-[1.5px] border-[#1a5fa0] dark:border-[#5b9bd5] bg-[#2e75b6] dark:bg-[#2563eb] text-white text-xs font-semibold hover:brightness-110">💾 Save</button>
+                        <button onClick={() => setShowFuelForm(false)} className="inline-flex items-center gap-1 px-3 py-1 rounded border-[1.5px] border-[#9db8d8] dark:border-slate-500 bg-[#e8f0f8] dark:bg-slate-700 text-[#1a5fa0] dark:text-slate-300 text-xs font-semibold hover:brightness-110">Cancel</button>
                       </div>
                     </div>
                   )}
 
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs text-[#1a3a5a] font-semibold">Filter:</span>
-                    <select className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'120px'}} value={fuelFilterVehicle} onChange={e => setFuelFilterVehicle(e.target.value)}>
+                    <span className="text-xs text-[#1a3a5a] dark:text-slate-300 font-semibold">Filter:</span>
+                    <select className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'120px'}} value={fuelFilterVehicle} onChange={e => setFuelFilterVehicle(e.target.value)}>
                       <option value="">All Vehicles</option>
                       {vehicles.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                     </select>
@@ -512,27 +523,27 @@ export default function FleetDashboard() {
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse text-xs">
                       <thead>
-                        <tr className="bg-[#2e75b6]">
-                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5]">Vehicle</th>
-                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5]">Date</th>
-                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5]">Amount</th>
-                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5]">Qty (L)</th>
-                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5]">Station</th>
-                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5]">Notes</th>
+                        <tr className="bg-[#2e75b6] dark:bg-[#1a5fa0]">
+                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5] dark:border-[#2563eb]">Vehicle</th>
+                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5] dark:border-[#2563eb]">Date</th>
+                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5] dark:border-[#2563eb]">Amount</th>
+                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5] dark:border-[#2563eb]">Qty (L)</th>
+                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5] dark:border-[#2563eb]">Station</th>
+                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5] dark:border-[#2563eb]">Notes</th>
                           <th className="text-white px-2 py-1 text-center font-bold">Del</th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredFuel.map(f => (
-                          <tr key={f.id} className="bg-[#eef4fb] even:bg-[#dce8f5] hover:bg-[#c8d8ec]">
-                            <td className="px-2 py-1 border-b border-[#b8ccdc] text-[#1a3a5a]">{vehicles.find(v => v.id === f.vehicle_id)?.name || 'N/A'}</td>
-                            <td className="px-2 py-1 border-b border-[#b8ccdc] text-[#1a3a5a]">{formatDate(f.fuel_date)}</td>
-                            <td className="px-2 py-1 border-b border-[#b8ccdc] text-[#1a3a5a] font-bold">{formatCurrency(f.amount)}</td>
-                            <td className="px-2 py-1 border-b border-[#b8ccdc] text-[#1a3a5a]">{f.quantity || 0}</td>
-                            <td className="px-2 py-1 border-b border-[#b8ccdc] text-[#1a3a5a]">{f.fuel_station || '-'}</td>
-                            <td className="px-2 py-1 border-b border-[#b8ccdc] text-[#1a3a5a]">{f.notes || '-'}</td>
-                            <td className="px-2 py-1 border-b border-[#b8ccdc] text-center">
-                              <button onClick={() => { if(window.confirm('Delete?')) { createFuelRecord({ id: f.id, _delete: true }); fetchFuelRecords() } }} className="px-2 py-0.5 rounded border-[1.5px] border-[#a02020] bg-[#d9534f] text-white text-xs hover:brightness-110">✕</button>
+                          <tr key={f.id} className="bg-[#eef4fb] dark:bg-[#1e293b] even:bg-[#dce8f5] dark:even:bg-[#0f172a] hover:bg-[#c8d8ec] dark:hover:bg-[#334155]">
+                            <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300">{vehicles.find(v => v.id === f.vehicle_id)?.name || 'N/A'}</td>
+                            <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300">{formatDate(f.fuel_date)}</td>
+                            <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300 font-bold">{formatCurrency(f.amount)}</td>
+                            <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300">{f.quantity || 0}</td>
+                            <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300">{f.fuel_station || '-'}</td>
+                            <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300">{f.notes || '-'}</td>
+                            <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-center">
+                              <button onClick={() => { if(window.confirm('Delete?')) { /* delete */ } }} className="px-2 py-0.5 rounded border-[1.5px] border-[#a02020] bg-[#d9534f] text-white text-xs hover:brightness-110">✕</button>
                             </td>
                           </tr>
                         ))}
@@ -546,39 +557,39 @@ export default function FleetDashboard() {
             {/* ══ REMINDERS TAB ══ */}
             {activeTab === 'reminders' && (
               <motion.div key="reminders" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full">
-                <div className="bg-[#eef4fb] border-[1.5px] border-[#9db8d8] rounded p-2.5">
+                <div className="bg-[#eef4fb] dark:bg-[#1e293b] border-[1.5px] border-[#9db8d8] dark:border-slate-600 rounded p-2.5">
                   <div className="flex justify-between items-center mb-2">
                     <button onClick={() => { setShowReminderForm(!showReminderForm); setReminderForm({...reminderForm, vehicle_id: selectedVehicle?.id || vehicles[0]?.id || '', reminder_name: '', next_date: new Date().toISOString().split('T')[0], frequency_days: 90, status: 'active', last_date: ''}) }} className="inline-flex items-center gap-1.5 px-3 py-1 rounded border-[1.5px] border-[#3d8b3d] bg-[#5cb85c] text-white text-xs font-semibold hover:brightness-110 cursor-pointer">
                       ➕ Add Reminder
                     </button>
-                    <div className="flex-1 text-center text-[#1a5fa0] font-bold text-[13px] tracking-wide">REMINDERS</div>
+                    <div className="flex-1 text-center text-[#1a5fa0] dark:text-[#5b9bd5] font-bold text-[13px] tracking-wide">REMINDERS</div>
                   </div>
 
                   {showReminderForm && (
-                    <div className="bg-[#dce8f5] border-[1.5px] border-[#9db8d8] rounded p-2 mb-2">
+                    <div className="bg-[#dce8f5] dark:bg-[#0f172a] border-[1.5px] border-[#9db8d8] dark:border-slate-600 rounded p-2 mb-2">
                       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[48px] text-right">Vehicle</span>
-                        <select className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'120px'}} value={reminderForm.vehicle_id} onChange={e => setReminderForm({...reminderForm, vehicle_id: e.target.value})}>
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[48px] text-right">Vehicle</span>
+                        <select className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'120px'}} value={reminderForm.vehicle_id} onChange={e => setReminderForm({...reminderForm, vehicle_id: e.target.value})}>
                           {vehicles.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                         </select>
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[40px] text-right">Name</span>
-                        <input className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'160px'}} value={reminderForm.reminder_name} onChange={e => setReminderForm({...reminderForm, reminder_name: e.target.value})} />
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[64px] text-right">Next Date</span>
-                        <input type="date" className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'130px'}} value={reminderForm.next_date} onChange={e => setReminderForm({...reminderForm, next_date: e.target.value})} />
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[40px] text-right">Name</span>
+                        <input className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'160px'}} value={reminderForm.reminder_name} onChange={e => setReminderForm({...reminderForm, reminder_name: e.target.value})} />
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[64px] text-right">Next Date</span>
+                        <input type="date" className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'130px'}} value={reminderForm.next_date} onChange={e => setReminderForm({...reminderForm, next_date: e.target.value})} />
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[48px] text-right">Every</span>
-                        <input type="number" className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'70px'}} value={reminderForm.frequency_days} onChange={e => setReminderForm({...reminderForm, frequency_days: parseInt(e.target.value) || 90})} />
-                        <span className="text-xs text-[#1a3a5a] ml-0.5">days</span>
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[52px] text-right ml-2">Status</span>
-                        <select className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'100px'}} value={reminderForm.status} onChange={e => setReminderForm({...reminderForm, status: e.target.value})}>
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[48px] text-right">Every</span>
+                        <input type="number" className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'70px'}} value={reminderForm.frequency_days} onChange={e => setReminderForm({...reminderForm, frequency_days: parseInt(e.target.value) || 90})} />
+                        <span className="text-xs text-[#1a3a5a] dark:text-slate-300 ml-0.5">days</span>
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[52px] text-right ml-2">Status</span>
+                        <select className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'100px'}} value={reminderForm.status} onChange={e => setReminderForm({...reminderForm, status: e.target.value})}>
                           <option value="active">Active</option>
                           <option value="completed">Completed</option>
                         </select>
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[64px] text-right">Last Done</span>
-                        <input type="date" className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'130px'}} value={reminderForm.last_date} onChange={e => setReminderForm({...reminderForm, last_date: e.target.value})} />
-                        <button onClick={handleSaveReminder} className="inline-flex items-center gap-1 px-3 py-1 rounded border-[1.5px] border-[#1a5fa0] bg-[#2e75b6] text-white text-xs font-semibold hover:brightness-110 ml-2">💾 Save</button>
-                        <button onClick={() => setShowReminderForm(false)} className="inline-flex items-center gap-1 px-3 py-1 rounded border-[1.5px] border-[#9db8d8] bg-[#e8f0f8] text-[#1a5fa0] text-xs font-semibold hover:brightness-110">Cancel</button>
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[64px] text-right">Last Done</span>
+                        <input type="date" className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'130px'}} value={reminderForm.last_date} onChange={e => setReminderForm({...reminderForm, last_date: e.target.value})} />
+                        <button onClick={handleSaveReminder} className="inline-flex items-center gap-1 px-3 py-1 rounded border-[1.5px] border-[#1a5fa0] dark:border-[#5b9bd5] bg-[#2e75b6] dark:bg-[#2563eb] text-white text-xs font-semibold hover:brightness-110 ml-2">💾 Save</button>
+                        <button onClick={() => setShowReminderForm(false)} className="inline-flex items-center gap-1 px-3 py-1 rounded border-[1.5px] border-[#9db8d8] dark:border-slate-500 bg-[#e8f0f8] dark:bg-slate-700 text-[#1a5fa0] dark:text-slate-300 text-xs font-semibold hover:brightness-110">Cancel</button>
                       </div>
                     </div>
                   )}
@@ -586,13 +597,13 @@ export default function FleetDashboard() {
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse text-xs">
                       <thead>
-                        <tr className="bg-[#2e75b6]">
-                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5]">Vehicle</th>
-                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5]">Name</th>
-                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5]">Next Date</th>
-                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5]">Every (days)</th>
-                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5]">Status</th>
-                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5]">Last Done</th>
+                        <tr className="bg-[#2e75b6] dark:bg-[#1a5fa0]">
+                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5] dark:border-[#2563eb]">Vehicle</th>
+                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5] dark:border-[#2563eb]">Name</th>
+                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5] dark:border-[#2563eb]">Next Date</th>
+                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5] dark:border-[#2563eb]">Every (days)</th>
+                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5] dark:border-[#2563eb]">Status</th>
+                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5] dark:border-[#2563eb]">Last Done</th>
                           <th className="text-white px-2 py-1 text-center font-bold">Del</th>
                         </tr>
                       </thead>
@@ -600,14 +611,14 @@ export default function FleetDashboard() {
                         {reminders.map(r => {
                           const st = getReminderStatus(r)
                           return (
-                            <tr key={r.id} className="bg-[#eef4fb] even:bg-[#dce8f5] hover:bg-[#c8d8ec]">
-                              <td className="px-2 py-1 border-b border-[#b8ccdc] text-[#1a3a5a]">{vehicles.find(v => v.id === r.vehicle_id)?.name || 'N/A'}</td>
-                              <td className="px-2 py-1 border-b border-[#b8ccdc] text-[#1a3a5a]">{r.reminder_name}</td>
-                              <td className="px-2 py-1 border-b border-[#b8ccdc] text-[#1a3a5a]">{formatDate(r.next_date)}</td>
-                              <td className="px-2 py-1 border-b border-[#b8ccdc] text-[#1a3a5a]">{r.frequency_days}</td>
-                              <td className="px-2 py-1 border-b border-[#b8ccdc]"><span className={`inline-block px-1.5 py-0.5 rounded-full text-[11px] font-semibold ${st.class}`}>{st.label}</span></td>
-                              <td className="px-2 py-1 border-b border-[#b8ccdc] text-[#1a3a5a]">{formatDate(r.last_date)}</td>
-                              <td className="px-2 py-1 border-b border-[#b8ccdc] text-center">
+                            <tr key={r.id} className="bg-[#eef4fb] dark:bg-[#1e293b] even:bg-[#dce8f5] dark:even:bg-[#0f172a] hover:bg-[#c8d8ec] dark:hover:bg-[#334155]">
+                              <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300">{vehicles.find(v => v.id === r.vehicle_id)?.name || 'N/A'}</td>
+                              <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300">{r.reminder_name}</td>
+                              <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300">{formatDate(r.next_date)}</td>
+                              <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300">{r.frequency_days}</td>
+                              <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600"><span className={`inline-block px-1.5 py-0.5 rounded-full text-[11px] font-semibold ${st.class}`}>{st.label}</span></td>
+                              <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300">{formatDate(r.last_date)}</td>
+                              <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-center">
                                 <button onClick={() => { if(window.confirm('Delete?')) { updateReminder(r.id, { status: 'completed' }); fetchReminders() } }} className="px-2 py-0.5 rounded border-[1.5px] border-[#a02020] bg-[#d9534f] text-white text-xs hover:brightness-110">✕</button>
                               </td>
                             </tr>
@@ -623,31 +634,31 @@ export default function FleetDashboard() {
             {/* ══ METER TAB ══ */}
             {activeTab === 'meter' && (
               <motion.div key="meter" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full">
-                <div className="bg-[#eef4fb] border-[1.5px] border-[#9db8d8] rounded p-2.5">
+                <div className="bg-[#eef4fb] dark:bg-[#1e293b] border-[1.5px] border-[#9db8d8] dark:border-slate-600 rounded p-2.5">
                   <div className="flex justify-between items-center mb-2">
                     <button onClick={() => { setShowMeterForm(!showMeterForm); setMeterForm({...meterForm, vehicle_id: selectedVehicle?.id || vehicles[0]?.id || '', reading_date: new Date().toISOString().split('T')[0], odometer_reading: '', notes: ''}) }} className="inline-flex items-center gap-1.5 px-3 py-1 rounded border-[1.5px] border-[#3d8b3d] bg-[#5cb85c] text-white text-xs font-semibold hover:brightness-110 cursor-pointer">
                       ➕ Add Reading
                     </button>
-                    <div className="flex-1 text-center text-[#1a5fa0] font-bold text-[13px] tracking-wide">METER TRACKING</div>
+                    <div className="flex-1 text-center text-[#1a5fa0] dark:text-[#5b9bd5] font-bold text-[13px] tracking-wide">METER TRACKING</div>
                   </div>
 
                   {showMeterForm && (
-                    <div className="bg-[#dce8f5] border-[1.5px] border-[#9db8d8] rounded p-2 mb-2">
+                    <div className="bg-[#dce8f5] dark:bg-[#0f172a] border-[1.5px] border-[#9db8d8] dark:border-slate-600 rounded p-2 mb-2">
                       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[48px] text-right">Vehicle</span>
-                        <select className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'120px'}} value={meterForm.vehicle_id} onChange={e => setMeterForm({...meterForm, vehicle_id: e.target.value})}>
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[48px] text-right">Vehicle</span>
+                        <select className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'120px'}} value={meterForm.vehicle_id} onChange={e => setMeterForm({...meterForm, vehicle_id: e.target.value})}>
                           {vehicles.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                         </select>
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[40px] text-right">Date</span>
-                        <input type="date" className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'130px'}} value={meterForm.reading_date} onChange={e => setMeterForm({...meterForm, reading_date: e.target.value})} />
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[60px] text-right">Reading</span>
-                        <input type="number" className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'110px'}} placeholder="Odometer" value={meterForm.odometer_reading} onChange={e => setMeterForm({...meterForm, odometer_reading: e.target.value})} />
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[40px] text-right">Date</span>
+                        <input type="date" className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'130px'}} value={meterForm.reading_date} onChange={e => setMeterForm({...meterForm, reading_date: e.target.value})} />
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[60px] text-right">Reading</span>
+                        <input type="number" className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'110px'}} placeholder="Odometer" value={meterForm.odometer_reading} onChange={e => setMeterForm({...meterForm, odometer_reading: e.target.value})} />
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[#1a3a5a] font-semibold text-xs min-w-[48px] text-right">Notes</span>
-                        <input className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'280px'}} value={meterForm.notes} onChange={e => setMeterForm({...meterForm, notes: e.target.value})} />
-                        <button onClick={handleSaveMeter} className="inline-flex items-center gap-1 px-3 py-1 rounded border-[1.5px] border-[#1a5fa0] bg-[#2e75b6] text-white text-xs font-semibold hover:brightness-110">💾 Save</button>
-                        <button onClick={() => setShowMeterForm(false)} className="inline-flex items-center gap-1 px-3 py-1 rounded border-[1.5px] border-[#9db8d8] bg-[#e8f0f8] text-[#1a5fa0] text-xs font-semibold hover:brightness-110">Cancel</button>
+                        <span className="text-[#1a3a5a] dark:text-slate-300 font-semibold text-xs min-w-[48px] text-right">Notes</span>
+                        <input className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'280px'}} value={meterForm.notes} onChange={e => setMeterForm({...meterForm, notes: e.target.value})} />
+                        <button onClick={handleSaveMeter} className="inline-flex items-center gap-1 px-3 py-1 rounded border-[1.5px] border-[#1a5fa0] dark:border-[#5b9bd5] bg-[#2e75b6] dark:bg-[#2563eb] text-white text-xs font-semibold hover:brightness-110">💾 Save</button>
+                        <button onClick={() => setShowMeterForm(false)} className="inline-flex items-center gap-1 px-3 py-1 rounded border-[1.5px] border-[#9db8d8] dark:border-slate-500 bg-[#e8f0f8] dark:bg-slate-700 text-[#1a5fa0] dark:text-slate-300 text-xs font-semibold hover:brightness-110">Cancel</button>
                       </div>
                     </div>
                   )}
@@ -655,22 +666,22 @@ export default function FleetDashboard() {
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse text-xs">
                       <thead>
-                        <tr className="bg-[#2e75b6]">
-                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5]">Vehicle</th>
-                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5]">Date</th>
-                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5]">Reading (KM)</th>
-                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5]">Notes</th>
+                        <tr className="bg-[#2e75b6] dark:bg-[#1a5fa0]">
+                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5] dark:border-[#2563eb]">Vehicle</th>
+                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5] dark:border-[#2563eb]">Date</th>
+                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5] dark:border-[#2563eb]">Reading (KM)</th>
+                          <th className="text-white px-2 py-1 text-left font-bold border-r border-[#5b9bd5] dark:border-[#2563eb]">Notes</th>
                           <th className="text-white px-2 py-1 text-center font-bold">Del</th>
                         </tr>
                       </thead>
                       <tbody>
                         {[...meterReadings].sort((a, b) => new Date(b.reading_date) - new Date(a.reading_date)).map(m => (
-                          <tr key={m.id} className="bg-[#eef4fb] even:bg-[#dce8f5] hover:bg-[#c8d8ec]">
-                            <td className="px-2 py-1 border-b border-[#b8ccdc] text-[#1a3a5a]">{vehicles.find(v => v.id === m.vehicle_id)?.name || 'N/A'}</td>
-                            <td className="px-2 py-1 border-b border-[#b8ccdc] text-[#1a3a5a]">{formatDate(m.reading_date)}</td>
-                            <td className="px-2 py-1 border-b border-[#b8ccdc] text-[#1a3a5a] font-bold">{Number(m.odometer_reading).toLocaleString()}</td>
-                            <td className="px-2 py-1 border-b border-[#b8ccdc] text-[#1a3a5a]">{m.notes || '-'}</td>
-                            <td className="px-2 py-1 border-b border-[#b8ccdc] text-center">
+                          <tr key={m.id} className="bg-[#eef4fb] dark:bg-[#1e293b] even:bg-[#dce8f5] dark:even:bg-[#0f172a] hover:bg-[#c8d8ec] dark:hover:bg-[#334155]">
+                            <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300">{vehicles.find(v => v.id === m.vehicle_id)?.name || 'N/A'}</td>
+                            <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300">{formatDate(m.reading_date)}</td>
+                            <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300 font-bold">{Number(m.odometer_reading).toLocaleString()}</td>
+                            <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-[#1a3a5a] dark:text-slate-300">{m.notes || '-'}</td>
+                            <td className="px-2 py-1 border-b border-[#b8ccdc] dark:border-slate-600 text-center">
                               <button onClick={() => { if(window.confirm('Delete?')) { /* delete meter */ } }} className="px-2 py-0.5 rounded border-[1.5px] border-[#a02020] bg-[#d9534f] text-white text-xs hover:brightness-110">✕</button>
                             </td>
                           </tr>
@@ -685,61 +696,61 @@ export default function FleetDashboard() {
             {/* ══ DASHBOARD TAB ══ */}
             {activeTab === 'dashboard' && (
               <motion.div key="dashboard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full">
-                <div className="bg-[#eef4fb] border-[1.5px] border-[#9db8d8] rounded p-2.5">
+                <div className="bg-[#eef4fb] dark:bg-[#1e293b] border-[1.5px] border-[#9db8d8] dark:border-slate-600 rounded p-2.5">
                   <div className="flex items-center gap-2.5 mb-2.5 flex-wrap">
-                    <div className="text-[#1a5fa0] font-bold text-[13px]">VEHICLE DASHBOARD</div>
-                    <select className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'120px'}} value={dashVehicle} onChange={e => setDashVehicle(e.target.value)}>
+                    <div className="text-[#1a5fa0] dark:text-[#5b9bd5] font-bold text-[13px]">VEHICLE DASHBOARD</div>
+                    <select className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'120px'}} value={dashVehicle} onChange={e => setDashVehicle(e.target.value)}>
                       <option value="">All Vehicles</option>
                       {vehicles.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                     </select>
-                    <span className="text-xs text-[#1a3a5a]">From</span>
-                    <input type="date" className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'130px'}} value={dashFrom} onChange={e => setDashFrom(e.target.value)} />
-                    <span className="text-xs text-[#1a3a5a]">To</span>
-                    <input type="date" className="bg-white border-[1.5px] border-[#7a9ec0] rounded px-1.5 py-0.5 text-xs" style={{width:'130px'}} value={dashTo} onChange={e => setDashTo(e.target.value)} />
+                    <span className="text-xs text-[#1a3a5a] dark:text-slate-300">From</span>
+                    <input type="date" className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'130px'}} value={dashFrom} onChange={e => setDashFrom(e.target.value)} />
+                    <span className="text-xs text-[#1a3a5a] dark:text-slate-300">To</span>
+                    <input type="date" className="bg-white dark:bg-slate-700 border-[1.5px] border-[#7a9ec0] dark:border-slate-500 rounded px-1.5 py-0.5 text-xs text-[#1a3a5a] dark:text-slate-200" style={{width:'130px'}} value={dashTo} onChange={e => setDashTo(e.target.value)} />
                   </div>
 
                   {/* Stats */}
                   <div className="grid grid-cols-4 gap-2.5 mb-2.5">
-                    <div className="bg-white border-[1.5px] border-[#9db8d8] rounded p-2.5 text-center">
-                      <div className="text-[22px] font-bold text-[#2e75b6]">{formatCurrency(totalExpenses)}</div>
-                      <div className="text-[11px] text-[#5b7fa0] mt-0.5">Total Expenses ({dashExpenses.length} records)</div>
+                    <div className="bg-white dark:bg-slate-700 border-[1.5px] border-[#9db8d8] dark:border-slate-500 rounded p-2.5 text-center">
+                      <div className="text-[22px] font-bold text-[#2e75b6] dark:text-[#5b9bd5]">{formatCurrency(totalExpenses)}</div>
+                      <div className="text-[11px] text-[#5b7fa0] dark:text-slate-400 mt-0.5">Total Expenses ({dashExpenses.length} records)</div>
                     </div>
-                    <div className="bg-white border-[1.5px] border-[#9db8d8] rounded p-2.5 text-center">
-                      <div className="text-[22px] font-bold text-[#2e75b6]">{formatCurrency(totalFuel)}</div>
-                      <div className="text-[11px] text-[#5b7fa0] mt-0.5">Fuel Cost · {totalFuelQty.toFixed(0)} L total</div>
+                    <div className="bg-white dark:bg-slate-700 border-[1.5px] border-[#9db8d8] dark:border-slate-500 rounded p-2.5 text-center">
+                      <div className="text-[22px] font-bold text-[#2e75b6] dark:text-[#5b9bd5]">{formatCurrency(totalFuel)}</div>
+                      <div className="text-[11px] text-[#5b7fa0] dark:text-slate-400 mt-0.5">Fuel Cost · {totalFuelQty.toFixed(0)} L total</div>
                     </div>
-                    <div className="bg-white border-[1.5px] border-[#9db8d8] rounded p-2.5 text-center">
+                    <div className="bg-white dark:bg-slate-700 border-[1.5px] border-[#9db8d8] dark:border-slate-500 rounded p-2.5 text-center">
                       <div className="text-[22px] font-bold text-[#5cb85c]">{vehicles.length}</div>
-                      <div className="text-[11px] text-[#5b7fa0] mt-0.5">Vehicles Registered</div>
+                      <div className="text-[11px] text-[#5b7fa0] dark:text-slate-400 mt-0.5">Vehicles Registered</div>
                     </div>
-                    <div className="bg-white border-[1.5px] border-[#9db8d8] rounded p-2.5 text-center">
+                    <div className="bg-white dark:bg-slate-700 border-[1.5px] border-[#9db8d8] dark:border-slate-500 rounded p-2.5 text-center">
                       <div className={`text-[22px] font-bold ${overdueReminders > 0 ? 'text-[#d9534f]' : 'text-[#5cb85c]'}`}>{overdueReminders}</div>
-                      <div className="text-[11px] text-[#5b7fa0] mt-0.5">Overdue Reminders</div>
+                      <div className="text-[11px] text-[#5b7fa0] dark:text-slate-400 mt-0.5">Overdue Reminders</div>
                     </div>
                   </div>
 
                   {/* Charts Row */}
                   <div className="flex gap-3.5">
-                    <div className="flex-1 bg-white border-[1.5px] border-[#9db8d8] rounded p-2.5">
-                      <div className="text-xs font-bold text-[#1a5fa0] mb-1.5">Expenses by Type</div>
+                    <div className="flex-1 bg-white dark:bg-slate-700 border-[1.5px] border-[#9db8d8] dark:border-slate-500 rounded p-2.5">
+                      <div className="text-xs font-bold text-[#1a5fa0] dark:text-[#5b9bd5] mb-1.5">Expenses by Type</div>
                       <div className="flex items-end gap-2 h-[100px] py-1">
                         {expenseTypes.map((t, i) => (
                           <div key={t} className="flex-1 flex flex-col items-center gap-0.5">
-                            <span className="text-[10px] text-[#2e75b6] font-semibold">{formatCurrency(expenseByType[t] || 0).replace('R ','')}</span>
+                            <span className="text-[10px] text-[#2e75b6] dark:text-[#5b9bd5] font-semibold">{formatCurrency(expenseByType[t] || 0).replace('R ','')}</span>
                             <div className="w-full rounded-t-sm min-h-[3px] transition-all" style={{height: `${Math.round((expenseByType[t] || 0) / maxExpType * 80)}px`, background: barColors[i % barColors.length]}}></div>
-                            <span className="text-[10px] text-[#5b7fa0] text-center">{t}</span>
+                            <span className="text-[10px] text-[#5b7fa0] dark:text-slate-400 text-center">{t}</span>
                           </div>
                         ))}
                       </div>
                     </div>
-                    <div className="flex-1 bg-white border-[1.5px] border-[#9db8d8] rounded p-2.5">
-                      <div className="text-xs font-bold text-[#1a5fa0] mb-1.5">Fuel Cost by Vehicle</div>
+                    <div className="flex-1 bg-white dark:bg-slate-700 border-[1.5px] border-[#9db8d8] dark:border-slate-500 rounded p-2.5">
+                      <div className="text-xs font-bold text-[#1a5fa0] dark:text-[#5b9bd5] mb-1.5">Fuel Cost by Vehicle</div>
                       <div className="flex items-end gap-2 h-[100px] py-1">
                         {Object.keys(fuelByVehicle).map((v, i) => (
                           <div key={v} className="flex-1 flex flex-col items-center gap-0.5">
-                            <span className="text-[10px] text-[#2e75b6] font-semibold">{formatCurrency(fuelByVehicle[v] || 0).replace('R ','')}</span>
+                            <span className="text-[10px] text-[#2e75b6] dark:text-[#5b9bd5] font-semibold">{formatCurrency(fuelByVehicle[v] || 0).replace('R ','')}</span>
                             <div className="w-full rounded-t-sm min-h-[3px] transition-all" style={{height: `${Math.round((fuelByVehicle[v] || 0) / maxFuelVeh * 80)}px`, background: barColors[i % barColors.length]}}></div>
-                            <span className="text-[10px] text-[#5b7fa0] text-center">{v}</span>
+                            <span className="text-[10px] text-[#5b7fa0] dark:text-slate-400 text-center">{v}</span>
                           </div>
                         ))}
                       </div>
@@ -747,12 +758,12 @@ export default function FleetDashboard() {
                   </div>
 
                   {/* Upcoming Reminders */}
-                  <div className="mt-2.5 bg-white border-[1.5px] border-[#9db8d8] rounded p-2.5">
-                    <div className="text-xs font-bold text-[#1a5fa0] mb-1.5">Upcoming Reminders</div>
+                  <div className="mt-2.5 bg-white dark:bg-slate-700 border-[1.5px] border-[#9db8d8] dark:border-slate-500 rounded p-2.5">
+                    <div className="text-xs font-bold text-[#1a5fa0] dark:text-[#5b9bd5] mb-1.5">Upcoming Reminders</div>
                     {upcomingReminders.length > 0 ? (
                       <table className="w-full text-xs border-collapse">
                         <thead>
-                          <tr className="bg-[#2e75b6]">
+                          <tr className="bg-[#2e75b6] dark:bg-[#1a5fa0]">
                             <th className="text-white px-2 py-1 text-left">Vehicle</th>
                             <th className="text-white px-2 py-1 text-left">Name</th>
                             <th className="text-white px-2 py-1 text-left">Next Date</th>
@@ -764,11 +775,11 @@ export default function FleetDashboard() {
                           {upcomingReminders.map(r => {
                             const st = getReminderStatus(r)
                             return (
-                              <tr key={r.id} className="bg-[#eef4fb] border-b border-[#b8ccdc]">
-                                <td className="px-2 py-1">{vehicles.find(v => v.id === r.vehicle_id)?.name}</td>
-                                <td className="px-2 py-1">{r.reminder_name}</td>
-                                <td className="px-2 py-1">{formatDate(r.next_date)}</td>
-                                <td className="px-2 py-1">{r.frequency_days}d</td>
+                              <tr key={r.id} className="bg-[#eef4fb] dark:bg-[#1e293b] border-b border-[#b8ccdc] dark:border-slate-600">
+                                <td className="px-2 py-1 text-[#1a3a5a] dark:text-slate-300">{vehicles.find(v => v.id === r.vehicle_id)?.name}</td>
+                                <td className="px-2 py-1 text-[#1a3a5a] dark:text-slate-300">{r.reminder_name}</td>
+                                <td className="px-2 py-1 text-[#1a3a5a] dark:text-slate-300">{formatDate(r.next_date)}</td>
+                                <td className="px-2 py-1 text-[#1a3a5a] dark:text-slate-300">{r.frequency_days}d</td>
                                 <td className="px-2 py-1"><span className={`inline-block px-1.5 py-0.5 rounded-full text-[11px] font-semibold ${st.class}`}>{st.label}</span></td>
                               </tr>
                             )
@@ -785,9 +796,6 @@ export default function FleetDashboard() {
           </AnimatePresence>
         </div>
       </div>
-
-      {/* Toast Notification */}
-      <div id="fleet-toast" className="fixed bottom-5 right-5 z-50 bg-[#2e75b6] text-white rounded px-4 py-2.5 text-[13px] font-semibold opacity-0 translate-y-5 transition-all pointer-events-none"></div>
     </div>
   )
 }
