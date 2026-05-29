@@ -13,7 +13,7 @@ import {
   Eye, Download, X
 } from 'lucide-react'
 
-// A4 Invoice Template Component - BLUE THEME (Single Page with Logo)
+// A4 Invoice Template Component - STEEL BLUE THEME
 function InvoiceTemplate({ invoice, job }) {
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(amount || 0)
@@ -21,6 +21,19 @@ function InvoiceTemplate({ invoice, job }) {
   const formatDate = (date) => {
     if (!date) return ''
     return new Date(date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })
+  }
+
+  // Steel Blue Color Palette
+  const colors = {
+    main: '#1B5080',        // Main steel blue
+    dark: '#0D2D4A',        // Darker navy
+    light: '#2B6FA8',       // Lighter highlight blue
+    lightBg: '#e8f0f8',     // Light background for logo circle
+    lightBorder: '#c5d5e8', // Light border
+    tableHeader: '#1B5080', // Table header bg
+    totalBg: '#eaf1f8',     // Total section background
+    accent: '#1B5080',      // Accent color
+    footerBorder: '#1B5080' // Footer border
   }
 
   return (
@@ -35,19 +48,19 @@ function InvoiceTemplate({ invoice, job }) {
       overflow: 'hidden'
     }}>
       {/* Header with Logo */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '18px', borderBottom: '3px solid #2563eb', paddingBottom: '12px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '18px', borderBottom: `3px solid ${colors.main}`, paddingBottom: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ 
             width: '65px', 
             height: '65px', 
             borderRadius: '50%', 
-            backgroundColor: '#eff6ff', 
+            backgroundColor: colors.lightBg, 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center', 
             flexShrink: 0, 
             overflow: 'hidden',
-            border: '2px solid #dbeafe'
+            border: `2px solid ${colors.lightBorder}`
           }}>
             <img 
               src="/logo.png" 
@@ -57,20 +70,20 @@ function InvoiceTemplate({ invoice, job }) {
                 e.target.style.display = 'none'
                 const parent = e.target.parentElement
                 if (parent) {
-                  parent.innerHTML = '<span style="font-size:22px;font-weight:bold;color:#2563eb">NG</span>'
+                  parent.innerHTML = `<span style="font-size:22px;font-weight:bold;color:${colors.main}">NG</span>`
                 }
               }}
             />
           </div>
           <div>
-            <h1 style={{ fontSize: '18px', fontWeight: 'bold', color: '#1e40af', margin: '0' }}>NDANDULENI GROUP</h1>
+            <h1 style={{ fontSize: '18px', fontWeight: 'bold', color: colors.dark, margin: '0' }}>NDANDULENI GROUP</h1>
             <p style={{ fontSize: '9px', color: '#64748b', margin: '2px 0' }}>Professional Cleaning & Hygiene Services</p>
             <p style={{ fontSize: '8px', color: '#94a3b8', margin: '0' }}>123 Main Street, Johannesburg | Tel: +27 11 234 5678 | info@ndanduleni.co.za</p>
           </div>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <h2 style={{ fontSize: '26px', fontWeight: 'bold', color: '#1e3a5f', margin: '0', letterSpacing: '2px' }}>INVOICE</h2>
-          <p style={{ fontSize: '15px', color: '#2563eb', margin: '2px 0', fontWeight: 'bold' }}>#{invoice?.invoice_number || 'N/A'}</p>
+          <h2 style={{ fontSize: '26px', fontWeight: 'bold', color: colors.dark, margin: '0', letterSpacing: '2px' }}>INVOICE</h2>
+          <p style={{ fontSize: '15px', color: colors.main, margin: '2px 0', fontWeight: 'bold' }}>#{invoice?.invoice_number || 'N/A'}</p>
           <div style={{ marginTop: '6px', fontSize: '9px', color: '#64748b' }}>
             <p style={{ margin: '1px 0' }}>Date: {formatDate(invoice?.invoice_date)}</p>
             <p style={{ margin: '1px 0' }}>Due: {formatDate(invoice?.due_date)}</p>
@@ -97,7 +110,7 @@ function InvoiceTemplate({ invoice, job }) {
       {/* Items Table */}
       <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '18px' }}>
         <thead>
-          <tr style={{ backgroundColor: '#1e40af', color: 'white' }}>
+          <tr style={{ backgroundColor: colors.tableHeader, color: 'white' }}>
             <th style={{ padding: '7px 10px', textAlign: 'left', fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase' }}>#</th>
             <th style={{ padding: '7px 10px', textAlign: 'left', fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase' }}>Description</th>
             <th style={{ padding: '7px 10px', textAlign: 'center', fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase' }}>Qty</th>
@@ -130,16 +143,16 @@ function InvoiceTemplate({ invoice, job }) {
             <span style={{ color: '#64748b' }}>VAT (15%):</span>
             <span style={{ color: '#1e293b' }}>{formatCurrency(invoice?.tax_amount)}</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', fontSize: '13px', fontWeight: 'bold', backgroundColor: '#eff6ff' }}>
-            <span style={{ color: '#1e40af' }}>TOTAL DUE:</span>
-            <span style={{ color: '#1e40af', fontSize: '15px' }}>{formatCurrency(invoice?.total_amount)}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', fontSize: '13px', fontWeight: 'bold', backgroundColor: colors.totalBg }}>
+            <span style={{ color: colors.dark }}>TOTAL DUE:</span>
+            <span style={{ color: colors.dark, fontSize: '15px' }}>{formatCurrency(invoice?.total_amount)}</span>
           </div>
         </div>
       </div>
 
       {/* Payment Info */}
       <div style={{ marginBottom: '15px', padding: '8px 14px', backgroundColor: '#f8fafc', borderRadius: '5px', border: '1px solid #e2e8f0' }}>
-        <h3 style={{ fontSize: '9px', fontWeight: 'bold', color: '#1e40af', marginBottom: '4px', textTransform: 'uppercase' }}>Payment Information</h3>
+        <h3 style={{ fontSize: '9px', fontWeight: 'bold', color: colors.dark, marginBottom: '4px', textTransform: 'uppercase' }}>Payment Information</h3>
         <div style={{ display: 'flex', gap: '25px', fontSize: '8px', color: '#64748b' }}>
           <div>
             <p style={{ margin: '1px 0' }}><strong>Bank:</strong> FNB</p>
@@ -156,11 +169,11 @@ function InvoiceTemplate({ invoice, job }) {
       </div>
 
       {/* Footer */}
-      <div style={{ borderTop: '2px solid #2563eb', paddingTop: '8px', textAlign: 'center' }}>
+      <div style={{ borderTop: `2px solid ${colors.footerBorder}`, paddingTop: '8px', textAlign: 'center' }}>
         <p style={{ fontSize: '7px', color: '#94a3b8', margin: '0' }}>
           Ndanduleni Group (Pty) Ltd | Reg: 2020/123456/07 | VAT: 4567890123 | 123 Main Street, Johannesburg, 2000
         </p>
-        <p style={{ fontSize: '11px', color: '#2563eb', margin: '6px 0 0 0', fontWeight: 'bold' }}>
+        <p style={{ fontSize: '11px', color: colors.main, margin: '6px 0 0 0', fontWeight: 'bold' }}>
           Thank you for your business!
         </p>
       </div>
