@@ -3,6 +3,7 @@ import ProtectedRoute from '../../../components/ProtectedRoute'
 import RoleBasedRoute from '../../../components/RoleBasedRoute'
 import HRDashboard from '../pages/HRDashboard'
 import EmployeeList from '../pages/EmployeeList'
+import EmployeeDetail from '../pages/EmployeeDetail'
 import AttendanceDashboard from '../attendance/pages/AttendanceDashboard'
 import { USER_ROLES } from '../../../types/authTypes'
 
@@ -25,7 +26,11 @@ export default function HRRoutes() {
         }
       />
 
-      {/* Employee Management */}
+      {/* ============================================ */}
+      {/* EMPLOYEE MANAGEMENT                          */}
+      {/* ============================================ */}
+      
+      {/* Employee List */}
       <Route
         path="/employees"
         element={
@@ -40,6 +45,7 @@ export default function HRRoutes() {
         }
       />
 
+      {/* New Employee (placeholder - goes to list for now) */}
       <Route
         path="/employees/new"
         element={
@@ -54,6 +60,7 @@ export default function HRRoutes() {
         }
       />
 
+      {/* Employee Detail/Edit - THIS WAS THE FIX */}
       <Route
         path="/employees/:id"
         element={
@@ -62,13 +69,15 @@ export default function HRRoutes() {
               USER_ROLES.SUPER_ADMIN, 
               USER_ROLES.HR_MANAGER
             ]}>
-              <EmployeeList />
+              <EmployeeDetail />
             </RoleBasedRoute>
           </ProtectedRoute>
         }
       />
 
-      {/* Attendance Tracking (Sub-module under HR) */}
+      {/* ============================================ */}
+      {/* ATTENDANCE TRACKING (Sub-module under HR)    */}
+      {/* ============================================ */}
       <Route
         path="/attendance"
         element={
@@ -164,7 +173,9 @@ export default function HRRoutes() {
         }
       />
 
-      {/* Leave Management Routes */}
+      {/* ============================================ */}
+      {/* LEAVE MANAGEMENT                             */}
+      {/* ============================================ */}
       <Route
         path="/leave"
         element={
@@ -197,7 +208,9 @@ export default function HRRoutes() {
         }
       />
 
-      {/* Contract Routes */}
+      {/* ============================================ */}
+      {/* CONTRACT ROUTES                              */}
+      {/* ============================================ */}
       <Route
         path="/contracts"
         element={
@@ -226,7 +239,9 @@ export default function HRRoutes() {
         }
       />
 
-      {/* Training Routes */}
+      {/* ============================================ */}
+      {/* TRAINING ROUTES                              */}
+      {/* ============================================ */}
       <Route
         path="/training"
         element={
@@ -255,7 +270,9 @@ export default function HRRoutes() {
         }
       />
 
-      {/* Disciplinary Routes */}
+      {/* ============================================ */}
+      {/* DISCIPLINARY ROUTES                          */}
+      {/* ============================================ */}
       <Route
         path="/disciplinary"
         element={
