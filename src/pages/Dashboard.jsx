@@ -135,24 +135,28 @@ export default function Dashboard() {
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.HR_MANAGER]
     },
     { 
+      icon: Database, 
+      label: 'Assets Management', 
+      description: 'Asset register, depreciation, maintenance',
+      path: '/assets',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.FINANCE_OFFICER, USER_ROLES.OPERATIONS_MANAGER]
+    },
+    { 
       icon: Smartphone, 
       label: 'Mobile Workforce', 
       description: 'Field app, GPS, photo uploads',
       path: '/mobile',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.CLEANER]
     },
-    { 
-      icon: Database, 
-      label: 'Assets', 
-      description: 'Depreciation, asset register',
-      path: '/assets',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.FINANCE_OFFICER]
-    },
   ]
 
   // Check which modules are built and accessible
   const isModuleBuilt = (module) => {
-    const builtModules = ['/hr', '/payroll', '/crm', '/sales', '/operations', '/inventory', '/procurement', '/finance', '/fleet', '/reports', '/workflow', '/documents']
+    const builtModules = [
+      '/hr', '/payroll', '/crm', '/sales', '/operations', 
+      '/inventory', '/procurement', '/finance', '/fleet', 
+      '/reports', '/workflow', '/documents', '/assets'
+    ]
     return builtModules.includes(module.path)
   }
 
@@ -170,7 +174,12 @@ export default function Dashboard() {
     }
     
     // Check if module route exists
-    const availableModules = ['/hr', '/payroll', '/crm', '/sales', '/operations', '/inventory', '/procurement', '/finance', '/fleet', '/reports', '/workflow', '/documents', '/dashboard', '/users']
+    const availableModules = [
+      '/hr', '/payroll', '/crm', '/sales', '/operations', 
+      '/inventory', '/procurement', '/finance', '/fleet', 
+      '/reports', '/workflow', '/documents', '/assets',
+      '/dashboard', '/users'
+    ]
     
     if (availableModules.includes(module.path)) {
       navigate(module.path)
