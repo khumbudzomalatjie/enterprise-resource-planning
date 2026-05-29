@@ -2,11 +2,7 @@ import { Routes, Route } from 'react-router-dom'
 import ProtectedRoute from '../../../components/ProtectedRoute'
 import RoleBasedRoute from '../../../components/RoleBasedRoute'
 import FinanceDashboard from '../pages/FinanceDashboard'
-import AccountsPayable from '../pages/AccountsPayable'
-import AccountsReceivable from '../pages/AccountsReceivable'
-import BudgetManagement from '../pages/BudgetManagement'
-import GeneralLedger from '../pages/GeneralLedger'
-import PaymentRecords from '../pages/PaymentRecords'
+import FinanceJobs from '../pages/FinanceJobs'
 import { USER_ROLES } from '../../../types/authTypes'
 
 export default function FinanceRoutes() {
@@ -33,7 +29,7 @@ export default function FinanceRoutes() {
       />
 
       {/* ============================================ */}
-      {/* APPROVALS QUEUE                              */}
+      {/* APPROVALS                                    */}
       {/* ============================================ */}
       <Route 
         path="/approvals" 
@@ -47,77 +43,91 @@ export default function FinanceRoutes() {
       />
 
       {/* ============================================ */}
-      {/* ACCOUNTS PAYABLE - Full CRUD                 */}
+      {/* ACCOUNTS PAYABLE                            */}
       {/* ============================================ */}
       <Route 
         path="/payables" 
         element={
           <ProtectedRoute>
             <RoleBasedRoute requiredRoles={allowedRoles}>
-              <AccountsPayable />
+              <FinanceDashboard />
             </RoleBasedRoute>
           </ProtectedRoute>
         } 
       />
 
       {/* ============================================ */}
-      {/* ACCOUNTS RECEIVABLE - View & Receive Payment */}
+      {/* ACCOUNTS RECEIVABLE                         */}
       {/* ============================================ */}
       <Route 
         path="/receivables" 
         element={
           <ProtectedRoute>
             <RoleBasedRoute requiredRoles={allowedRoles}>
-              <AccountsReceivable />
+              <FinanceDashboard />
             </RoleBasedRoute>
           </ProtectedRoute>
         } 
       />
 
       {/* ============================================ */}
-      {/* BUDGET MANAGEMENT - Create & View            */}
+      {/* BUDGETS                                      */}
       {/* ============================================ */}
       <Route 
         path="/budgets" 
         element={
           <ProtectedRoute>
             <RoleBasedRoute requiredRoles={allowedRoles}>
-              <BudgetManagement />
+              <FinanceDashboard />
             </RoleBasedRoute>
           </ProtectedRoute>
         } 
       />
 
       {/* ============================================ */}
-      {/* GENERAL LEDGER - View & Filter               */}
+      {/* GENERAL LEDGER                              */}
       {/* ============================================ */}
       <Route 
         path="/ledger" 
         element={
           <ProtectedRoute>
             <RoleBasedRoute requiredRoles={allowedRoles}>
-              <GeneralLedger />
+              <FinanceDashboard />
             </RoleBasedRoute>
           </ProtectedRoute>
         } 
       />
 
       {/* ============================================ */}
-      {/* PAYMENT RECORDS - Create & View              */}
+      {/* PAYMENTS                                     */}
       {/* ============================================ */}
       <Route 
         path="/payments" 
         element={
           <ProtectedRoute>
             <RoleBasedRoute requiredRoles={allowedRoles}>
-              <PaymentRecords />
+              <FinanceDashboard />
             </RoleBasedRoute>
           </ProtectedRoute>
         } 
       />
 
       {/* ============================================ */}
-      {/* FINANCE REPORTS                              */}
+      {/* JOBS → INVOICE GENERATION                   */}
+      {/* ============================================ */}
+      <Route 
+        path="/jobs" 
+        element={
+          <ProtectedRoute>
+            <RoleBasedRoute requiredRoles={allowedRoles}>
+              <FinanceJobs />
+            </RoleBasedRoute>
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* ============================================ */}
+      {/* REPORTS                                      */}
       {/* ============================================ */}
       <Route 
         path="/reports" 
