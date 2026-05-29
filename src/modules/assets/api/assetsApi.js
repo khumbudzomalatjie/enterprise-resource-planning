@@ -31,18 +31,36 @@ export const assetsApi = {
   },
 
   async createAsset(assetData) {
+    // Clean empty date strings to null
+    const cleanedData = { ...assetData }
+    if (!cleanedData.purchase_date || cleanedData.purchase_date === '') {
+      cleanedData.purchase_date = null
+    }
+    if (!cleanedData.warranty_expiry || cleanedData.warranty_expiry === '') {
+      cleanedData.warranty_expiry = null
+    }
+    
     const { data, error } = await supabase
       .from('assets')
-      .insert([assetData])
+      .insert([cleanedData])
       .select()
       .single()
     return { data, error }
   },
 
   async updateAsset(id, updates) {
+    // Clean empty date strings to null
+    const cleanedUpdates = { ...updates }
+    if (!cleanedUpdates.purchase_date || cleanedUpdates.purchase_date === '') {
+      cleanedUpdates.purchase_date = null
+    }
+    if (!cleanedUpdates.warranty_expiry || cleanedUpdates.warranty_expiry === '') {
+      cleanedUpdates.warranty_expiry = null
+    }
+
     const { data, error } = await supabase
       .from('assets')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update({ ...cleanedUpdates, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single()
@@ -89,9 +107,20 @@ export const assetsApi = {
   },
 
   async deleteCategory(id) {
+    // Check if any assets use this category
+    const { count } = await supabase
+      .from('assets')
+      .select('*', { count: 'exact', head: true })
+      .eq('category_id', id)
+      .neq('status', 'disposed')
+
+    if (count > 0) {
+      return { error: { message: `Cannot delete: ${count} active assets use this category. Reassign them first.` } }
+    }
+
     const { error } = await supabase
       .from('asset_categories')
-      .update({ is_active: false })
+      .delete()
       .eq('id', id)
     return { error }
   },
@@ -110,9 +139,13 @@ export const assetsApi = {
   },
 
   async createMaintenance(maintenanceData) {
+    const cleaned = { ...maintenanceData }
+    if (!cleaned.next_maintenance_date || cleaned.next_maintenance_date === '') {
+      cleaned.next_maintenance_date = null
+    }
     const { data, error } = await supabase
       .from('asset_maintenance')
-      .insert([maintenanceData])
+      .insert([cleaned])
       .select()
       .single()
     return { data, error }
@@ -157,7 +190,6 @@ export const assetsApi = {
       .single()
     
     if (!error && data) {
-      // Update asset location
       await supabase.from('assets')
         .update({ 
           location: transferData.to_location, 
@@ -190,7 +222,6 @@ export const assetsApi = {
       .single()
     
     if (!error && data) {
-      // Mark asset as disposed
       await supabase.from('assets')
         .update({ status: 'disposed', updated_at: new Date().toISOString() })
         .eq('id', disposalData.asset_id)
