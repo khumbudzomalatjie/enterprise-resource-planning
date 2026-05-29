@@ -29,7 +29,8 @@ import {
   Moon,
   Shield,
   Workflow,
-  FileCheck
+  FileCheck,
+  Camera
 } from 'lucide-react'
 
 export default function Dashboard() {
@@ -143,10 +144,10 @@ export default function Dashboard() {
     },
     { 
       icon: Smartphone, 
-      label: 'Mobile Workforce', 
-      description: 'Field app, GPS, photo uploads',
-      path: '/mobile',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.CLEANER]
+      label: 'Field Operations', 
+      description: 'Monitor cleaners, photos, incidents, supplies',
+      path: '/mobile/field',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.SUPERVISOR]
     },
   ]
 
@@ -155,7 +156,7 @@ export default function Dashboard() {
     const builtModules = [
       '/hr', '/payroll', '/crm', '/sales', '/operations', 
       '/inventory', '/procurement', '/finance', '/fleet', 
-      '/reports', '/workflow', '/documents', '/assets'
+      '/reports', '/workflow', '/documents', '/assets', '/mobile/field'
     ]
     return builtModules.includes(module.path)
   }
@@ -178,7 +179,7 @@ export default function Dashboard() {
       '/hr', '/payroll', '/crm', '/sales', '/operations', 
       '/inventory', '/procurement', '/finance', '/fleet', 
       '/reports', '/workflow', '/documents', '/assets',
-      '/dashboard', '/users'
+      '/mobile/field', '/dashboard', '/users'
     ]
     
     if (availableModules.includes(module.path)) {
