@@ -18,6 +18,7 @@ import InventoryRoutes from '../modules/inventory/routes/InventoryRoutes'
 import ProcurementRoutes from '../modules/procurement/routes/ProcurementRoutes'
 import FinanceRoutes from '../modules/finance/routes/FinanceRoutes'
 import FleetRoutes from '../modules/fleet/routes/FleetRoutes'
+import ReportsRoutes from '../modules/reports/routes/ReportsRoutes'
 
 import { USER_ROLES } from '../types/authTypes'
 
@@ -171,29 +172,22 @@ export default function AppRoutes() {
           </ProtectedRoute>
         } 
       />
-      
-      {/* ============================================ */}
-      {/* MODULE 11 - QUALITY CONTROL                  */}
-      {/* (Coming Soon)                                */}
-      {/* ============================================ */}
-      
+
       {/* ============================================ */}
       {/* MODULE 12 - REPORTING & ANALYTICS            */}
-      {/* (Coming Soon)                                */}
+      {/* Access: Super Admin, Ops Mgr, Finance, HR    */}
       {/* ============================================ */}
-      
-      {/* ============================================ */}
-      {/* MODULE 13 - CUSTOMER PORTAL                  */}
-      {/* (Coming Soon)                                */}
-      {/* ============================================ */}
+      <Route 
+        path="/reports/*" 
+        element={
+          <ProtectedRoute>
+            <ReportsRoutes />
+          </ProtectedRoute>
+        } 
+      />
       
       {/* ============================================ */}
       {/* MODULE 14 - MOBILE WORKFORCE                 */}
-      {/* (Coming Soon)                                */}
-      {/* ============================================ */}
-      
-      {/* ============================================ */}
-      {/* MODULE 15 - NOTIFICATIONS & COMMUNICATION    */}
       {/* (Coming Soon)                                */}
       {/* ============================================ */}
       
