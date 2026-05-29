@@ -4,6 +4,7 @@ import RoleBasedRoute from '../../../components/RoleBasedRoute'
 import HRDashboard from '../pages/HRDashboard'
 import EmployeeList from '../pages/EmployeeList'
 import EmployeeDetail from '../pages/EmployeeDetail'
+import CreateEmployee from '../pages/CreateEmployee'
 import AttendanceDashboard from '../attendance/pages/AttendanceDashboard'
 import { USER_ROLES } from '../../../types/authTypes'
 
@@ -45,7 +46,7 @@ export default function HRRoutes() {
         }
       />
 
-      {/* New Employee (placeholder - goes to list for now) */}
+      {/* Add New Employee */}
       <Route
         path="/employees/new"
         element={
@@ -54,13 +55,13 @@ export default function HRRoutes() {
               USER_ROLES.SUPER_ADMIN, 
               USER_ROLES.HR_MANAGER
             ]}>
-              <EmployeeList />
+              <CreateEmployee />
             </RoleBasedRoute>
           </ProtectedRoute>
         }
       />
 
-      {/* Employee Detail/Edit - THIS WAS THE FIX */}
+      {/* Employee Detail/View/Edit */}
       <Route
         path="/employees/:id"
         element={
