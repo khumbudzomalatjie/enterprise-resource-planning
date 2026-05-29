@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 
 export default function EmployeeList() {
-  const { employees, fetchEmployees, loading } = useHRStore()
+  const { employees, fetchEmployees, deleteEmployee, loading } = useHRStore()
   const { isDark, toggleTheme } = useThemeStore()
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
@@ -21,7 +21,7 @@ export default function EmployeeList() {
 
   useEffect(() => {
     loadEmployees()
-  }, [])
+  }, [department, status])
 
   const loadEmployees = async () => {
     const filters = {}
@@ -37,12 +37,25 @@ export default function EmployeeList() {
   }
 
   const handleEdit = (e, employeeId) => {
-    e.stopPropagation() // Prevent row click navigation
-    navigate(`/hr/employees/${employeeId}/edit`)
+    e.stopPropagation()
+    navigate(`/hr/employees/${employeeId}`)
   }
 
   const handleView = (employeeId) => {
     navigate(`/hr/employees/${employeeId}`)
+  }
+
+  const handleDelete = async (e, employeeId, employeeName) => {
+    e.stopPropagation()
+    if (window.confirm(`Are you sure you want to terminate ${employeeName}?`)) {
+      const result = await deleteEmployee(employeeId)
+      if (result.success) {
+        toast.success(`${employeeName} has been terminated`)
+        loadEmployees()
+      } else {
+        toast.error('Failed to terminate employee')
+      }
+    }
   }
 
   return (
@@ -67,7 +80,7 @@ export default function EmployeeList() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 mb-6 text-sm">
-          <Link to="/hr" className="text-slate-500 hover:text-emerald-600">HR Dashboard</Link>
+          <Link to="/hr" className="text-slate-500 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400">HR Dashboard</Link>
           <ChevronRight className="w-4 h-4 text-slate-400" />
           <span className="text-slate-800 dark:text-white font-medium">Employees</span>
         </div>
@@ -83,7 +96,7 @@ export default function EmployeeList() {
               <Users className="w-8 h-8 text-emerald-600" />
               Employees
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1">Manage employee records</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">{(employees || []).length} employee records</p>
           </div>
           
           <button
@@ -109,8 +122,8 @@ export default function EmployeeList() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search employees..."
-                className="w-full pl-10 pr-4 py-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300 placeholder-slate-400"
+                placeholder="Search employees by name, email, or code..."
+                className="w-full pl-10 pr-4 py-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-500"
               />
             </div>
             
@@ -120,12 +133,12 @@ export default function EmployeeList() {
               className="px-4 py-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300"
             >
               <option value="all">All Departments</option>
-              <option value="operations">Operations</option>
-              <option value="cleaning">Cleaning</option>
-              <option value="administration">Administration</option>
-              <option value="sales">Sales</option>
-              <option value="hr">Human Resources</option>
-              <option value="finance">Finance</option>
+              <option value="Operations">Operations</option>
+              <option value="Cleaning">Cleaning</option>
+              <option value="Administration">Administration</option>
+              <option value="Sales">Sales</option>
+              <option value="HR">Human Resources</option>
+              <option value="Finance">Finance</option>
             </select>
 
             <select
@@ -138,6 +151,7 @@ export default function EmployeeList() {
               <option value="on_leave">On Leave</option>
               <option value="inactive">Inactive</option>
               <option value="terminated">Terminated</option>
+              <option value="suspended">Suspended</option>
             </select>
 
             <button
@@ -153,9 +167,9 @@ export default function EmployeeList() {
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-            <p className="text-slate-500">Loading employees...</p>
+            <p className="text-slate-500 dark:text-slate-400">Loading employees...</p>
           </div>
-        ) : (
+        ) : (employees || []).length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {employees.map((emp, index) => (
               <motion.div
@@ -175,7 +189,7 @@ export default function EmployeeList() {
                       {emp.profile_photo_url ? (
                         <img src={emp.profile_photo_url} alt="" className="w-full h-full rounded-full object-cover" />
                       ) : (
-                        <span className="text-emerald-600 font-semibold text-lg">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold text-lg">
                           {emp.first_name?.[0]}{emp.last_name?.[0]}
                         </span>
                       )}
@@ -184,12 +198,21 @@ export default function EmployeeList() {
                       <h3 className="font-semibold text-slate-800 dark:text-white">
                         {emp.first_name} {emp.last_name}
                       </h3>
-                      <p className="text-xs text-slate-500">{emp.employee_code}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{emp.employee_code}</p>
                     </div>
                   </div>
                   
                   {/* Action Buttons */}
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    {/* View Button - Eye Icon */}
+                    <button
+                      onClick={() => handleView(emp.id)}
+                      className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors"
+                      title="View Employee Details"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    
                     {/* Edit Button - Pencil Icon */}
                     <button
                       onClick={(e) => handleEdit(e, emp.id)}
@@ -198,15 +221,17 @@ export default function EmployeeList() {
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
-                    
-                    {/* View Button */}
-                    <button
-                      onClick={() => handleView(emp.id)}
-                      className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors"
-                      title="View Employee"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
+
+                    {/* Delete/Terminate Button */}
+                    {emp.employment_status !== 'terminated' && (
+                      <button
+                        onClick={(e) => handleDelete(e, emp.id, `${emp.first_name} ${emp.last_name}`)}
+                        className="p-2 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                        title="Terminate Employee"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -217,10 +242,19 @@ export default function EmployeeList() {
                       ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
                       : emp.employment_status === 'on_leave'
                       ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                      : emp.employment_status === 'suspended'
+                      ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                      : emp.employment_status === 'terminated'
+                      ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                       : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
                   }`}>
                     {emp.employment_status?.replace('_', ' ') || 'Unknown'}
                   </span>
+                  {emp.department && (
+                    <span className="ml-2 px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+                      {emp.department}
+                    </span>
+                  )}
                 </div>
 
                 {/* Details */}
@@ -243,20 +277,59 @@ export default function EmployeeList() {
               </motion.div>
             ))}
           </div>
+        ) : null}
+
+        {/* Empty State */}
+        {!loading && (employees || []).length === 0 && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }}
+            className="text-center py-16 neu-raised rounded-3xl"
+          >
+            <Users className="w-20 h-20 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+            <p className="text-slate-500 dark:text-slate-400 text-lg mb-2">No employees found</p>
+            <p className="text-slate-400 dark:text-slate-500 text-sm mb-6">
+              {search || department !== 'all' || status !== 'all' 
+                ? 'Try adjusting your search or filters' 
+                : 'Start by adding your first employee'}
+            </p>
+            {!search && department === 'all' && status === 'all' && (
+              <button
+                onClick={() => navigate('/hr/employees/new')}
+                className="mt-2 neu-raised neu-btn px-6 py-3 rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700 transition-colors inline-flex items-center gap-2"
+              >
+                <Plus className="w-5 h-5" />
+                <span>Add First Employee</span>
+              </button>
+            )}
+          </motion.div>
         )}
 
-        {!loading && employees.length === 0 && (
-          <div className="text-center py-12 neu-raised rounded-3xl">
-            <Users className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-500 text-lg">No employees found</p>
-            <button
-              onClick={() => navigate('/hr/employees/new')}
-              className="mt-4 neu-raised neu-btn px-6 py-3 rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700 transition-colors inline-flex items-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Add First Employee</span>
-            </button>
-          </div>
+        {/* Stats Summary */}
+        {!loading && (employees || []).length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ delay: 0.3 }}
+            className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4"
+          >
+            <div className="neu-raised rounded-2xl p-4 text-center">
+              <p className="text-xs text-slate-500 dark:text-slate-400">Total Employees</p>
+              <p className="text-2xl font-bold text-slate-800 dark:text-white">{employees.length}</p>
+            </div>
+            <div className="neu-raised rounded-2xl p-4 text-center">
+              <p className="text-xs text-slate-500 dark:text-slate-400">Active</p>
+              <p className="text-2xl font-bold text-emerald-600">{employees.filter(e => e.employment_status === 'active').length}</p>
+            </div>
+            <div className="neu-raised rounded-2xl p-4 text-center">
+              <p className="text-xs text-slate-500 dark:text-slate-400">On Leave</p>
+              <p className="text-2xl font-bold text-amber-600">{employees.filter(e => e.employment_status === 'on_leave').length}</p>
+            </div>
+            <div className="neu-raised rounded-2xl p-4 text-center">
+              <p className="text-xs text-slate-500 dark:text-slate-400">Terminated</p>
+              <p className="text-2xl font-bold text-red-600">{employees.filter(e => e.employment_status === 'terminated').length}</p>
+            </div>
+          </motion.div>
         )}
       </main>
     </div>
