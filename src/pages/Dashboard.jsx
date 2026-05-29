@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import useAuthStore from '../store/authStore'
@@ -28,8 +28,8 @@ import {
   Sun,
   Moon,
   Shield,
-  Wrench,
-  Car
+  Workflow,
+  FileCheck
 } from 'lucide-react'
 
 export default function Dashboard() {
@@ -116,9 +116,30 @@ export default function Dashboard() {
     { 
       icon: BarChart3, 
       label: 'Reporting & Analytics', 
-      description: 'BI dashboards, KPI tracking, export reports',
+      description: 'BI dashboards, KPI tracking, export',
       path: '/reports',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.FINANCE_OFFICER, USER_ROLES.HR_MANAGER]
+    },
+    { 
+      icon: Workflow, 
+      label: 'Workflow Automation', 
+      description: 'Approvals, triggers, business processes',
+      path: '/workflow',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.FINANCE_OFFICER]
+    },
+    { 
+      icon: FolderOpen, 
+      label: 'Document Management', 
+      description: 'Contracts, policies, SOPs, storage',
+      path: '/documents',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.HR_MANAGER]
+    },
+    { 
+      icon: Smartphone, 
+      label: 'Mobile Workforce', 
+      description: 'Field app, GPS, photo uploads',
+      path: '/mobile',
+      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.CLEANER]
     },
     { 
       icon: Database, 
@@ -127,32 +148,11 @@ export default function Dashboard() {
       path: '/assets',
       roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.FINANCE_OFFICER]
     },
-    { 
-      icon: Smartphone, 
-      label: 'Mobile Cleaner', 
-      description: 'Field app, route updates',
-      path: '/mobile',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.CLEANER]
-    },
-    { 
-      icon: Calendar, 
-      label: 'Events', 
-      description: 'Scheduling, logistics, tasks',
-      path: '/events',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER]
-    },
-    { 
-      icon: FolderOpen, 
-      label: 'Documents', 
-      description: 'DMS, contracts, cloud storage',
-      path: '/documents',
-      roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.OPERATIONS_MANAGER, USER_ROLES.HR_MANAGER]
-    },
   ]
 
   // Check which modules are built and accessible
   const isModuleBuilt = (module) => {
-    const builtModules = ['/hr', '/payroll', '/crm', '/sales', '/operations', '/inventory', '/procurement', '/finance', '/fleet', '/reports']
+    const builtModules = ['/hr', '/payroll', '/crm', '/sales', '/operations', '/inventory', '/procurement', '/finance', '/fleet', '/reports', '/workflow', '/documents']
     return builtModules.includes(module.path)
   }
 
@@ -170,7 +170,7 @@ export default function Dashboard() {
     }
     
     // Check if module route exists
-    const availableModules = ['/hr', '/payroll', '/crm', '/sales', '/operations', '/inventory', '/procurement', '/finance', '/fleet', '/reports', '/dashboard', '/users']
+    const availableModules = ['/hr', '/payroll', '/crm', '/sales', '/operations', '/inventory', '/procurement', '/finance', '/fleet', '/reports', '/workflow', '/documents', '/dashboard', '/users']
     
     if (availableModules.includes(module.path)) {
       navigate(module.path)
