@@ -21,6 +21,7 @@ import FleetRoutes from '../modules/fleet/routes/FleetRoutes'
 import ReportsRoutes from '../modules/reports/routes/ReportsRoutes'
 import WorkflowRoutes from '../modules/workflow/routes/WorkflowRoutes'
 import DocumentsRoutes from '../modules/documents/routes/DocumentsRoutes'
+import AssetsRoutes from '../modules/assets/routes/AssetsRoutes'
 
 import { USER_ROLES } from '../types/authTypes'
 
@@ -193,6 +194,18 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute>
             <DocumentsRoutes />
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* ============================================ */}
+      {/* ASSETS MANAGEMENT                            */}
+      {/* ============================================ */}
+      <Route 
+        path="/assets/*" 
+        element={
+          <ProtectedRoute>
+            <AssetsRoutes />
           </ProtectedRoute>
         } 
       />
