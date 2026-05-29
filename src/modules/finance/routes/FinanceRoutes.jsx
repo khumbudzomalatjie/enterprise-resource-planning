@@ -3,6 +3,7 @@ import ProtectedRoute from '../../../components/ProtectedRoute'
 import RoleBasedRoute from '../../../components/RoleBasedRoute'
 import FinanceDashboard from '../pages/FinanceDashboard'
 import FinanceJobs from '../pages/FinanceJobs'
+import VendorApprovals from '../pages/VendorApprovals'
 import { USER_ROLES } from '../../../types/authTypes'
 
 export default function FinanceRoutes() {
@@ -29,14 +30,14 @@ export default function FinanceRoutes() {
       />
 
       {/* ============================================ */}
-      {/* VENDOR APPROVALS                             */}
+      {/* VENDOR APPROVALS - Dedicated Page            */}
       {/* ============================================ */}
       <Route 
         path="/approvals" 
         element={
           <ProtectedRoute>
             <RoleBasedRoute requiredRoles={allowedRoles}>
-              <FinanceDashboard />
+              <VendorApprovals />
             </RoleBasedRoute>
           </ProtectedRoute>
         } 
