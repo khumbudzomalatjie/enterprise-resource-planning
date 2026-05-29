@@ -112,7 +112,13 @@ const useAssetsStore = create((set, get) => ({
 
   deleteCategory: async (id) => {
     const { error } = await assetsApi.deleteCategory(id)
-    if (error) return { success: false, error: error.message }
+    if (error) {
+      // Check if it's because assets are using this category
+      if (error.message?.includes('active assets')) {
+        return { success: false, error: error.message }
+      }
+      return { success: false, error: error.message || 'Failed to delete category' }
+    }
     set(state => ({
       categories: state.categories.filter(c => c.id !== id)
     }))
@@ -174,7 +180,6 @@ const useAssetsStore = create((set, get) => ({
     const { data, error } = await assetsApi.createTransfer(transferData)
     if (error) return { success: false, error: error.message }
     set(state => ({ transfers: [data, ...state.transfers] }))
-    // Refresh assets to update location
     await get().fetchAssets()
     return { success: true, data }
   },
@@ -196,7 +201,6 @@ const useAssetsStore = create((set, get) => ({
     const { data, error } = await assetsApi.createDisposal(disposalData)
     if (error) return { success: false, error: error.message }
     set(state => ({ disposals: [data, ...state.disposals] }))
-    // Refresh assets to update status
     await get().fetchAssets()
     return { success: true, data }
   },
