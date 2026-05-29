@@ -4,14 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Navbar from '../../../components/Navbar'
 import useThemeStore from '../../../store/themeStore'
 import { documentsApi } from '../api/documentsApi'
-import { supabase } from '../../../lib/supabaseClient'
 import toast from 'react-hot-toast'
 import { 
   FolderOpen, FileText, Upload, FileCheck, Shield, 
   BookOpen, Clock, Plus, Search, ArrowLeft, X,
   Sparkles, Sun, Moon, Download, Trash2, Edit, Eye,
-  ChevronRight, ChevronLeft, FolderPlus, MoreVertical,
-  File, Image, FileSpreadsheet, FileIcon
+  ChevronRight, ChevronLeft, FolderPlus,
+  File, Image, FileSpreadsheet
 } from 'lucide-react'
 
 export default function DocumentsDashboard() {
@@ -32,7 +31,6 @@ export default function DocumentsDashboard() {
   // Modal states
   const [showAddFolder, setShowAddFolder] = useState(false)
   const [showEditDoc, setShowEditDoc] = useState(null)
-  const [showViewDoc, setShowViewDoc] = useState(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null)
 
   // Form states
@@ -45,14 +43,18 @@ export default function DocumentsDashboard() {
 
   const loadData = async () => {
     setLoading(true)
-    const [statsData, { data: f }, { data: docs }] = await Promise.all([
-      documentsApi.getStats(),
-      documentsApi.getFolders(),
-      documentsApi.getDocuments(currentFolder?.id || null, { search, type: typeFilter })
-    ])
-    setStats(statsData)
-    setFolders(f || [])
-    setDocuments(docs || [])
+    try {
+      const [statsData, { data: f }, { data: docs }] = await Promise.all([
+        documentsApi.getStats(),
+        documentsApi.getFolders(),
+        documentsApi.getDocuments(currentFolder?.id || null, { search, type: typeFilter })
+      ])
+      setStats(statsData)
+      setFolders(f || [])
+      setDocuments(docs || [])
+    } catch (error) {
+      console.error('Load error:', error)
+    }
     setLoading(false)
   }
 
@@ -67,7 +69,7 @@ export default function DocumentsDashboard() {
     loadData()
   }
 
-  // File Upload
+  // File Upload - FIXED
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -81,66 +83,18 @@ export default function DocumentsDashboard() {
     setUploading(true)
 
     try {
-      const fileExt = file.name.split('.').pop()
-      const fileName = `docs/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
+      const result = await documentsApi.uploadDocument(file, {
+        document_name: file.name,
+        folder_id: currentFolder?.id || null,
+        document_type: 'other'
+      })
 
-      // Upload to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: true
-        })
-
-      if (uploadError) {
-        // Try to create bucket if it doesn't exist
-        if (uploadError.message.includes('bucket') || uploadError.message.includes('not found')) {
-          await supabase.storage.createBucket('documents', {
-            public: true,
-            fileSizeLimit: 20971520 // 20MB
-          })
-          
-          const { data: retryData, error: retryError } = await supabase.storage
-            .from('documents')
-            .upload(fileName, file, {
-              cacheControl: '3600',
-              upsert: true
-            })
-
-          if (retryError) throw retryError
-
-          const { data: { publicUrl } } = supabase.storage
-            .from('documents')
-            .getPublicUrl(fileName)
-
-          await documentsApi.createDocument({
-            document_name: file.name,
-            folder_id: currentFolder?.id || null,
-            document_type: 'other',
-            file_url: publicUrl,
-            file_size: file.size,
-            file_type: file.type
-          })
-        } else {
-          throw uploadError
-        }
+      if (result.error) {
+        toast.error(result.error)
       } else {
-        const { data: { publicUrl } } = supabase.storage
-          .from('documents')
-          .getPublicUrl(fileName)
-
-        await documentsApi.createDocument({
-          document_name: file.name,
-          folder_id: currentFolder?.id || null,
-          document_type: 'other',
-          file_url: publicUrl,
-          file_size: file.size,
-          file_type: file.type
-        })
+        toast.success('Document uploaded successfully!')
+        loadData()
       }
-
-      toast.success('Document uploaded successfully!')
-      loadData()
     } catch (error) {
       console.error('Upload error:', error)
       toast.error('Failed to upload document')
@@ -172,7 +126,8 @@ export default function DocumentsDashboard() {
       folder_id: editDocData.folder_id || null,
       updated_at: new Date().toISOString()
     }
-    await documentsApi.updateDocument(showEditDoc.id, updates)
+    const { error } = await documentsApi.updateDocument(showEditDoc.id, updates)
+    if (error) { toast.error('Failed to update'); return }
     toast.success('Document updated!')
     setShowEditDoc(null)
     loadData()
@@ -181,7 +136,8 @@ export default function DocumentsDashboard() {
   // Delete Document
   const handleDeleteDocument = async () => {
     if (!showDeleteConfirm) return
-    await documentsApi.deleteDocument(showDeleteConfirm.id)
+    const { error } = await documentsApi.deleteDocument(showDeleteConfirm.id)
+    if (error) { toast.error('Failed to delete'); return }
     toast.success('Document moved to archive')
     setShowDeleteConfirm(null)
     loadData()
@@ -194,11 +150,6 @@ export default function DocumentsDashboard() {
 
   const goBack = () => {
     setCurrentFolder(null)
-  }
-
-  // Download document
-  const handleDownload = (doc) => {
-    window.open(doc.file_url, '_blank')
   }
 
   const getFileIcon = (fileType) => {
@@ -310,9 +261,16 @@ export default function DocumentsDashboard() {
         <div className="neu-raised rounded-2xl p-4 mb-6 flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input type="text" value={search} onChange={e => { setSearch(e.target.value); loadData() }} placeholder="Search documents..." className="w-full pl-10 pr-4 py-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300" />
+            <input 
+              type="text" 
+              value={search} 
+              onChange={e => setSearch(e.target.value)} 
+              onKeyDown={e => e.key === 'Enter' && loadData()}
+              placeholder="Search documents..." 
+              className="w-full pl-10 pr-4 py-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300" 
+            />
           </div>
-          <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); loadData() }} className="px-4 py-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300">
+          <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value) }} className="px-4 py-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300">
             <option value="">All Types</option>
             <option value="contract">Contracts</option>
             <option value="policy">Policies</option>
@@ -323,6 +281,7 @@ export default function DocumentsDashboard() {
             <option value="certificate">Certificates</option>
             <option value="other">Other</option>
           </select>
+          <button onClick={loadData} className="neu-raised neu-btn px-4 py-3 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Search</button>
         </div>
 
         {/* Content */}
