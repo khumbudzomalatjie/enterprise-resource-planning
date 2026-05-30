@@ -4,20 +4,26 @@ import { motion } from 'framer-motion'
 import Navbar from '../../../components/Navbar'
 import useOperationsStore from '../store/operationsStore'
 import useThemeStore from '../../../store/themeStore'
+import useAuthStore from '../../../store/authStore'
+import { supabase } from '../../../lib/supabaseClient'
 import toast from 'react-hot-toast'
 import { 
   Briefcase, Calendar, Clock, CheckCircle2, AlertTriangle,
   Users, MapPin, BarChart3, Plus, TrendingUp,
   Sparkles, Sun, Moon, ChevronRight, ArrowLeft,
-  Truck, ClipboardCheck, Map
+  Truck, ClipboardCheck, Map, Pause, Play
 } from 'lucide-react'
 
 export default function OperationsDashboard() {
   const { stats, fetchOperationsStats, fetchJobs, fetchJobCategories, jobCategories, loading } = useOperationsStore()
   const { isDark, toggleTheme } = useThemeStore()
+  const { profile } = useAuthStore()
   const navigate = useNavigate()
   const [todayJobs, setTodayJobs] = useState([])
   const [recentJobs, setRecentJobs] = useState([])
+
+  // Check if user can manage job status (supervisor and above)
+  const canManageJobs = ['super_admin', 'operations_manager', 'supervisor'].includes(profile?.role)
 
   useEffect(() => {
     loadData()
@@ -32,6 +38,72 @@ export default function OperationsDashboard() {
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(amount || 0)
+  }
+
+  // HOLD JOB - Only for supervisors and above
+  const handleHoldJob = async (jobId, e) => {
+    e.stopPropagation()
+    const reason = prompt('Reason for putting job on hold:')
+    if (reason === null) return
+    
+    try {
+      const { error } = await supabase
+        .from('jobs')
+        .update({ 
+          status: 'on_hold', 
+          notes: `HOLD: ${reason}`,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', jobId)
+
+      if (error) throw error
+      toast.success('Job put on hold ⏸️')
+      loadData()
+    } catch (error) {
+      toast.error('Failed to hold job')
+    }
+  }
+
+  // RESUME JOB from hold
+  const handleResumeJob = async (jobId, e) => {
+    e.stopPropagation()
+    try {
+      const { error } = await supabase
+        .from('jobs')
+        .update({ 
+          status: 'scheduled', 
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', jobId)
+
+      if (error) throw error
+      toast.success('Job resumed ▶️')
+      loadData()
+    } catch (error) {
+      toast.error('Failed to resume job')
+    }
+  }
+
+  // CANCEL JOB
+  const handleCancelJob = async (jobId, e) => {
+    e.stopPropagation()
+    if (!window.confirm('Cancel this job? This cannot be undone.')) return
+    
+    try {
+      const { error } = await supabase
+        .from('jobs')
+        .update({ 
+          status: 'cancelled', 
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', jobId)
+
+      if (error) throw error
+      toast.success('Job cancelled')
+      loadData()
+    } catch (error) {
+      toast.error('Failed to cancel job')
+    }
   }
 
   const getStatusColor = (status) => {
@@ -138,14 +210,10 @@ export default function OperationsDashboard() {
                 key={cat.id}
                 className="px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer hover:scale-105 transition-transform"
                 style={{ backgroundColor: cat.color + '20', color: cat.color, border: '1px solid ' + cat.color + '40' }}
-                title={`${cat.description || cat.name} · ${cat.estimated_duration_minutes} min · ${cat.default_cleaners_required} cleaner(s)`}
               >
                 {cat.name}
               </span>
             ))}
-            {jobCategories.length === 0 && (
-              <p className="text-slate-500 text-sm">No categories loaded. Run the database schema.</p>
-            )}
           </div>
         </motion.div>
 
@@ -159,31 +227,56 @@ export default function OperationsDashboard() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-700">
-                  <th className="text-left text-sm font-medium text-slate-500 py-3 px-4">Job #</th>
-                  <th className="text-left text-sm font-medium text-slate-500 py-3 px-4">Client</th>
-                  <th className="text-left text-sm font-medium text-slate-500 py-3 px-4">Category</th>
-                  <th className="text-left text-sm font-medium text-slate-500 py-3 px-4">Time</th>
-                  <th className="text-left text-sm font-medium text-slate-500 py-3 px-4">Priority</th>
-                  <th className="text-left text-sm font-medium text-slate-500 py-3 px-4">Status</th>
-                  <th className="text-left text-sm font-medium text-slate-500 py-3 px-4">Location</th>
+                  <th className="text-left text-sm font-medium text-slate-500 py-3 px-2">Job #</th>
+                  <th className="text-left text-sm font-medium text-slate-500 py-3 px-2">Client</th>
+                  <th className="text-left text-sm font-medium text-slate-500 py-3 px-2">Category</th>
+                  <th className="text-left text-sm font-medium text-slate-500 py-3 px-2">Time</th>
+                  <th className="text-left text-sm font-medium text-slate-500 py-3 px-2">Priority</th>
+                  <th className="text-left text-sm font-medium text-slate-500 py-3 px-2">Status</th>
+                  <th className="text-left text-sm font-medium text-slate-500 py-3 px-2">Location</th>
+                  {canManageJobs && <th className="text-center text-sm font-medium text-slate-500 py-3 px-2">Actions</th>}
                 </tr>
               </thead>
               <tbody>
                 {todayJobs.map(job => (
                   <tr key={job.id} className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer" onClick={() => navigate(`/operations/jobs/${job.id}`)}>
-                    <td className="py-3 px-4 text-sm font-medium text-slate-800 dark:text-white">{job.job_number}</td>
-                    <td className="py-3 px-4 text-sm text-slate-600 dark:text-slate-400">{job.clients?.company_name}</td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-2 text-sm font-medium text-slate-800 dark:text-white">{job.job_number}</td>
+                    <td className="py-3 px-2 text-sm text-slate-600 dark:text-slate-400">{job.clients?.company_name || '-'}</td>
+                    <td className="py-3 px-2">
                       {job.job_categories ? (
                         <span className="px-2 py-1 rounded-full text-xs" style={{ backgroundColor: job.job_categories.color + '20', color: job.job_categories.color }}>
                           {job.job_categories.name}
                         </span>
                       ) : '-'}
                     </td>
-                    <td className="py-3 px-4 text-sm text-slate-600">{job.scheduled_start_time?.slice(0,5) || '-'}</td>
-                    <td className="py-3 px-4"><span className={`text-xs font-medium ${getPriorityColor(job.priority)}`}>{job.priority}</span></td>
-                    <td className="py-3 px-4"><span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(job.status)}`}>{job.status.replace('_', ' ')}</span></td>
-                    <td className="py-3 px-4 text-sm text-slate-500 flex items-center gap-1"><MapPin className="w-3 h-3" />{job.site_city || 'N/A'}</td>
+                    <td className="py-3 px-2 text-sm text-slate-600">{job.scheduled_start_time?.slice(0,5) || '-'}</td>
+                    <td className="py-3 px-2"><span className={`text-xs font-medium ${getPriorityColor(job.priority)}`}>{job.priority}</span></td>
+                    <td className="py-3 px-2"><span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(job.status)}`}>{job.status.replace('_', ' ')}</span></td>
+                    <td className="py-3 px-2 text-sm text-slate-500 flex items-center gap-1"><MapPin className="w-3 h-3" />{job.site_city || 'N/A'}</td>
+                    {canManageJobs && (
+                      <td className="py-3 px-2 text-center" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-center gap-1">
+                          {job.status === 'on_hold' ? (
+                            <button onClick={(e) => handleResumeJob(job.id, e)}
+                              className="px-2 py-1 rounded-lg bg-blue-100 text-blue-700 text-xs hover:bg-blue-200 flex items-center gap-1"
+                              title="Resume Job">
+                              <Play className="w-3 h-3" /> Resume
+                            </button>
+                          ) : job.status !== 'completed' && job.status !== 'cancelled' ? (
+                            <>
+                              <button onClick={(e) => handleHoldJob(job.id, e)}
+                                className="px-2 py-1 rounded-lg bg-purple-100 text-purple-700 text-xs hover:bg-purple-200 flex items-center gap-1"
+                                title="Put on Hold">
+                                <Pause className="w-3 h-3" /> Hold
+                              </button>
+                              <button onClick={(e) => handleCancelJob(job.id, e)}
+                                className="px-2 py-1 rounded-lg bg-red-100 text-red-700 text-xs hover:bg-red-200"
+                                title="Cancel Job">✕</button>
+                            </>
+                          ) : null}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -197,12 +290,29 @@ export default function OperationsDashboard() {
           <h2 className="text-xl font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2"><Briefcase className="w-5 h-5 text-emerald-600" />Recent Jobs</h2>
           <div className="space-y-3">
             {recentJobs.map(job => (
-              <div key={job.id} className="flex justify-between p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/50 cursor-pointer" onClick={() => navigate(`/operations/jobs/${job.id}`)}>
+              <div key={job.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/50 cursor-pointer" onClick={() => navigate(`/operations/jobs/${job.id}`)}>
                 <div>
                   <p className="font-medium text-slate-800 dark:text-white text-sm">{job.title}</p>
                   <p className="text-xs text-slate-500">{job.clients?.company_name} · {job.job_number}</p>
                 </div>
-                <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(job.status)}`}>{job.status.replace('_', ' ')}</span>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(job.status)}`}>{job.status.replace('_', ' ')}</span>
+                  {canManageJobs && job.status !== 'completed' && job.status !== 'cancelled' && (
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                      {job.status === 'on_hold' ? (
+                        <button onClick={(e) => handleResumeJob(job.id, e)}
+                          className="px-2 py-1 rounded-lg bg-blue-100 text-blue-700 text-xs hover:bg-blue-200 flex items-center gap-1">
+                          <Play className="w-3 h-3" />
+                        </button>
+                      ) : (
+                        <button onClick={(e) => handleHoldJob(job.id, e)}
+                          className="px-2 py-1 rounded-lg bg-purple-100 text-purple-700 text-xs hover:bg-purple-200">
+                          <Pause className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>
