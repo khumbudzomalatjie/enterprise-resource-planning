@@ -1,10 +1,9 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Home, Briefcase, Clock, Camera, User } from 'lucide-react'
 
-export default function BottomNav() {
+export default function BottomNav({ active }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const currentPath = location.pathname
 
   const navItems = [
     { id: 'home', icon: Home, label: 'Home', path: '/mobile' },
@@ -14,38 +13,35 @@ export default function BottomNav() {
     { id: 'profile', icon: User, label: 'Profile', path: '/mobile/profile' },
   ]
 
-  const isActive = (path) => {
-    if (path === '/mobile') return currentPath === '/mobile' || currentPath === '/mobile/'
-    return currentPath.startsWith(path)
+  const currentPath = location.pathname
+  const getActiveTab = () => {
+    if (active) return active
+    if (currentPath === '/mobile' || currentPath === '/mobile/') return 'home'
+    if (currentPath.includes('/mobile/jobs')) return 'jobs'
+    if (currentPath.includes('/mobile/clock')) return 'clock'
+    if (currentPath.includes('/mobile/photos')) return 'photos'
+    if (currentPath.includes('/mobile/profile')) return 'profile'
+    return 'home'
   }
 
-  const handleTap = (path) => {
-    if (currentPath === path || (path === '/mobile' && (currentPath === '/mobile' || currentPath === '/mobile/'))) {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    } else {
-      navigate(path)
-    }
-  }
+  const currentActive = getActiveTab()
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-200 z-50 safe-area-bottom">
-      <div className="flex justify-around items-center h-16 max-w-lg mx-auto">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50">
+      <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-2">
         {navItems.map(item => (
           <button
             key={item.id}
-            onClick={() => handleTap(item.path)}
-            className={`flex flex-col items-center justify-center gap-0.5 w-full h-full transition-all duration-200 active:scale-90 ${
-              isActive(item.path) ? 'text-emerald-600' : 'text-slate-400'
+            onClick={() => navigate(item.path)}
+            className={`flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all min-w-[60px] ${
+              currentActive === item.id ? 'text-emerald-600 scale-110' : 'text-slate-400 hover:text-slate-600 active:scale-95'
             }`}
-            style={{ WebkitTapHighlightColor: 'transparent' }}
           >
-            <div className={`relative p-1 rounded-full transition-all ${isActive(item.path) ? 'bg-emerald-50' : ''}`}>
-              <item.icon className="w-6 h-6" strokeWidth={isActive(item.path) ? 2.5 : 2} />
-            </div>
-            <span className="text-[10px] font-semibold">{item.label}</span>
+            <item.icon className={`w-6 h-6 ${currentActive === item.id ? 'fill-emerald-100' : ''}`} />
+            <span className="text-[10px] font-medium">{item.label}</span>
           </button>
         ))}
       </div>
-    </nav>
+    </div>
   )
 }
