@@ -13,7 +13,7 @@ export default function BottomNav({ active }) {
     { id: 'profile', icon: User, label: 'Profile', path: '/mobile/profile' },
   ]
 
-  // Determine active tab from URL if not passed as prop
+  // Determine active tab from URL
   const currentPath = location.pathname
   const getActiveTab = () => {
     if (active) return active
@@ -27,22 +27,38 @@ export default function BottomNav({ active }) {
 
   const currentActive = getActiveTab()
 
-  const handleNavigation = (path) => {
-    navigate(path)
+  const handleNavigation = (path, id) => {
+    // Always navigate, even if it's the same page
+    // This ensures the Home button works even when already on home
+    if (path === '/mobile' || path === '/mobile/') {
+      // Force navigation to home by using replace and then push
+      navigate('/mobile', { replace: true })
+      // Small delay to ensure the navigation triggers
+      setTimeout(() => {
+        window.location.reload()
+      }, 50)
+    } else {
+      navigate(path)
+    }
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 safe-area-bottom">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-2">
         {navItems.map(item => (
           <button
             key={item.id}
-            onClick={() => handleNavigation(item.path)}
-            className={`flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all min-w-[60px] ${
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              handleNavigation(item.path, item.id)
+            }}
+            className={`flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all min-w-[60px] cursor-pointer ${
               currentActive === item.id 
                 ? 'text-emerald-600 scale-110' 
                 : 'text-slate-400 hover:text-slate-600 active:scale-95'
             }`}
+            type="button"
           >
             <item.icon className={`w-6 h-6 ${currentActive === item.id ? 'fill-emerald-100' : ''}`} />
             <span className="text-[10px] font-medium">{item.label}</span>
