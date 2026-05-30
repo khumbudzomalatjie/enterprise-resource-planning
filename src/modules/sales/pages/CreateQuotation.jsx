@@ -14,25 +14,21 @@ import {
 
 // Pre-defined services with prices
 var SERVICES = [
-  // Once-Off Cleaning
   { category: 'Once-Off Cleaning', name: '1 Bedroom - Once-Off', unit_price: 1304.35, unit: 'per_service' },
   { category: 'Once-Off Cleaning', name: '2 Bedroom - Once-Off', unit_price: 1739.13, unit: 'per_service' },
   { category: 'Once-Off Cleaning', name: '3 Bedroom - Once-Off', unit_price: 2347.83, unit: 'per_service' },
   { category: 'Once-Off Cleaning', name: '4 Bedroom - Once-Off', unit_price: 3043.48, unit: 'per_service' },
   { category: 'Once-Off Cleaning', name: '5 Bedroom - Once-Off', unit_price: 3478.26, unit: 'per_service' },
-  // Monthly Contracts - 1x per Week
   { category: 'Monthly Contract (1x Week)', name: '1 Bedroom - 1x Week', unit_price: 869.57, unit: 'per_month' },
   { category: 'Monthly Contract (1x Week)', name: '2 Bedroom - 1x Week', unit_price: 1043.48, unit: 'per_month' },
   { category: 'Monthly Contract (1x Week)', name: '3 Bedroom - 1x Week', unit_price: 1391.30, unit: 'per_month' },
   { category: 'Monthly Contract (1x Week)', name: '4 Bedroom - 1x Week', unit_price: 1739.13, unit: 'per_month' },
   { category: 'Monthly Contract (1x Week)', name: '5 Bedroom - 1x Week', unit_price: 2173.91, unit: 'per_month' },
-  // Monthly Contracts - 2x per Week
   { category: 'Monthly Contract (2x Week)', name: '1 Bedroom - 2x Week', unit_price: 1565.22, unit: 'per_month' },
   { category: 'Monthly Contract (2x Week)', name: '2 Bedroom - 2x Week', unit_price: 1913.04, unit: 'per_month' },
   { category: 'Monthly Contract (2x Week)', name: '3 Bedroom - 2x Week', unit_price: 2434.78, unit: 'per_month' },
   { category: 'Monthly Contract (2x Week)', name: '4 Bedroom - 2x Week', unit_price: 3130.43, unit: 'per_month' },
   { category: 'Monthly Contract (2x Week)', name: '5 Bedroom - 2x Week', unit_price: 3913.04, unit: 'per_month' },
-  // Monthly Contracts - 3x per Week
   { category: 'Monthly Contract (3x Week)', name: '1 Bedroom - 3x Week', unit_price: 2173.91, unit: 'per_month' },
   { category: 'Monthly Contract (3x Week)', name: '2 Bedroom - 3x Week', unit_price: 2608.70, unit: 'per_month' },
   { category: 'Monthly Contract (3x Week)', name: '3 Bedroom - 3x Week', unit_price: 3043.48, unit: 'per_month' },
@@ -51,7 +47,7 @@ var COLORS = {
   totalBg: '#eaf1f8',
 }
 
-// A4 Quotation Template Component - Single Page with Logo
+// A4 Quotation Template - Single Page with Logo
 function QuotationTemplate({ quotation, items }) {
   var formatCurrency = function(amount) {
     return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', minimumFractionDigits: 2 }).format(amount || 0)
@@ -70,7 +66,7 @@ function QuotationTemplate({ quotation, items }) {
     <div style={{
       width: '210mm',
       height: '297mm',
-      padding: '15mm 20mm',
+      padding: '12mm 18mm',
       backgroundColor: 'white',
       fontFamily: 'Inter, Arial, sans-serif',
       color: '#1e293b',
@@ -79,63 +75,63 @@ function QuotationTemplate({ quotation, items }) {
       position: 'relative'
     }}>
       {/* Header with Logo */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', borderBottom: `3px solid ${COLORS.main}`, paddingBottom: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '55px', height: '55px', borderRadius: '50%', backgroundColor: COLORS.lightBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden', border: `2px solid ${COLORS.lightBorder}` }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', borderBottom: `3px solid ${COLORS.main}`, paddingBottom: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '50px', height: '50px', borderRadius: '50%', backgroundColor: COLORS.lightBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden', border: `2px solid ${COLORS.lightBorder}` }}>
             <img src="/logo.png" alt="Logo" style={{ width: '80%', height: '80%', objectFit: 'contain' }}
-              onError={function(e) { e.target.style.display = 'none'; if (e.target.parentElement) e.target.parentElement.innerHTML = '<span style="font-size:18px;font-weight:bold;color:' + COLORS.main + '">NG</span>' }} />
+              onError={function(e) { e.target.style.display = 'none'; if (e.target.parentElement) e.target.parentElement.innerHTML = '<span style="font-size:16px;font-weight:bold;color:' + COLORS.main + '">NG</span>' }} />
           </div>
           <div>
-            <h1 style={{ fontSize: '16px', fontWeight: 'bold', color: COLORS.dark, margin: '0' }}>NDANDULENI GROUP</h1>
-            <p style={{ fontSize: '8px', color: '#64748b', margin: '2px 0' }}>Professional Cleaning & Hygiene Services</p>
-            <p style={{ fontSize: '7px', color: '#94a3b8', margin: '0' }}>123 Main Street, Johannesburg | Tel: +27 11 234 5678</p>
+            <h1 style={{ fontSize: '15px', fontWeight: 'bold', color: COLORS.dark, margin: '0' }}>NDANDULENI GROUP</h1>
+            <p style={{ fontSize: '7px', color: '#64748b', margin: '1px 0' }}>Professional Cleaning & Hygiene Services</p>
+            <p style={{ fontSize: '6px', color: '#94a3b8', margin: '0' }}>123 Main Street, Johannesburg | Tel: +27 11 234 5678</p>
           </div>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: COLORS.dark, margin: '0', letterSpacing: '2px' }}>QUOTATION</h2>
-          <p style={{ fontSize: '14px', color: COLORS.main, margin: '2px 0', fontWeight: 'bold' }}>#{quotation?.quotation_number || 'DRAFT'}</p>
-          <div style={{ marginTop: '4px', fontSize: '8px', color: '#64748b' }}>
-            <p style={{ margin: '1px 0' }}>Date: {formatDate(quotation?.quotation_date)}</p>
-            <p style={{ margin: '1px 0' }}>Valid Until: {formatDate(quotation?.valid_until)}</p>
+          <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: COLORS.dark, margin: '0', letterSpacing: '2px' }}>QUOTATION</h2>
+          <p style={{ fontSize: '13px', color: COLORS.main, margin: '1px 0', fontWeight: 'bold' }}>#{quotation?.quotation_number || 'DRAFT'}</p>
+          <div style={{ marginTop: '3px', fontSize: '7px', color: '#64748b' }}>
+            <p style={{ margin: '0' }}>Date: {formatDate(quotation?.quotation_date)}</p>
+            <p style={{ margin: '0' }}>Valid: {formatDate(quotation?.valid_until)}</p>
           </div>
         </div>
       </div>
 
-      {/* Bill To */}
-      <div style={{ marginBottom: '15px', display: 'flex', gap: '25px' }}>
+      {/* Bill To & Details */}
+      <div style={{ marginBottom: '10px', display: 'flex', gap: '20px' }}>
         <div style={{ flex: 1 }}>
-          <h3 style={{ fontSize: '8px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '3px' }}>Bill To:</h3>
-          <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#1e293b', margin: '0' }}>{quotation?.client_name || 'Client'}</p>
-          {quotation?.client_email && <p style={{ fontSize: '8px', color: '#64748b', margin: '1px 0' }}>{quotation.client_email}</p>}
-          <p style={{ fontSize: '8px', color: '#64748b', margin: '1px 0' }}>{quotation?.client_address || ''}</p>
+          <h3 style={{ fontSize: '7px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '2px' }}>Bill To:</h3>
+          <p style={{ fontSize: '11px', fontWeight: 'bold', color: '#1e293b', margin: '0' }}>{quotation?.client_name || 'Client'}</p>
+          {quotation?.client_email && <p style={{ fontSize: '7px', color: '#64748b', margin: '0' }}>{quotation.client_email}</p>}
+          <p style={{ fontSize: '7px', color: '#64748b', margin: '0' }}>{quotation?.client_address || ''}</p>
         </div>
         <div style={{ flex: 1 }}>
-          <h3 style={{ fontSize: '8px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '3px' }}>Prepared By:</h3>
-          <p style={{ fontSize: '11px', color: '#1e293b', margin: '0' }}>Ndanduleni Group Sales</p>
-          <p style={{ fontSize: '8px', color: '#64748b', margin: '1px 0' }}>Payment Terms: {quotation?.payment_terms || '50% Deposit'}</p>
+          <h3 style={{ fontSize: '7px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '2px' }}>Details:</h3>
+          <p style={{ fontSize: '9px', color: '#1e293b', margin: '0' }}>Prepared: Ndanduleni Group Sales</p>
+          <p style={{ fontSize: '8px', color: '#64748b', margin: '0' }}>Terms: {quotation?.payment_terms || '50% Deposit'}</p>
         </div>
       </div>
 
       {/* Items Table */}
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '15px' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px' }}>
         <thead>
           <tr style={{ backgroundColor: COLORS.tableHeader, color: 'white' }}>
-            <th style={{ padding: '5px 8px', textAlign: 'left', fontSize: '8px', fontWeight: 'bold' }}>#</th>
-            <th style={{ padding: '5px 8px', textAlign: 'left', fontSize: '8px', fontWeight: 'bold' }}>Description</th>
-            <th style={{ padding: '5px 8px', textAlign: 'center', fontSize: '8px', fontWeight: 'bold' }}>Qty</th>
-            <th style={{ padding: '5px 8px', textAlign: 'right', fontSize: '8px', fontWeight: 'bold' }}>Unit Price</th>
-            <th style={{ padding: '5px 8px', textAlign: 'right', fontSize: '8px', fontWeight: 'bold' }}>Total</th>
+            <th style={{ padding: '4px 6px', textAlign: 'left', fontSize: '7px', fontWeight: 'bold' }}>#</th>
+            <th style={{ padding: '4px 6px', textAlign: 'left', fontSize: '7px', fontWeight: 'bold' }}>Description</th>
+            <th style={{ padding: '4px 6px', textAlign: 'center', fontSize: '7px', fontWeight: 'bold', width: '40px' }}>Qty</th>
+            <th style={{ padding: '4px 6px', textAlign: 'right', fontSize: '7px', fontWeight: 'bold', width: '80px' }}>Unit Price</th>
+            <th style={{ padding: '4px 6px', textAlign: 'right', fontSize: '7px', fontWeight: 'bold', width: '80px' }}>Total</th>
           </tr>
         </thead>
         <tbody>
           {(items || []).filter(function(item) { return item.description }).map(function(item, i) {
             return (
               <tr key={i} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                <td style={{ padding: '4px 8px', fontSize: '8px', color: '#64748b' }}>{i + 1}</td>
-                <td style={{ padding: '4px 8px', fontSize: '8px', color: '#1e293b', fontWeight: '500' }}>{item.description}</td>
-                <td style={{ padding: '4px 8px', fontSize: '8px', color: '#1e293b', textAlign: 'center' }}>{item.quantity}</td>
-                <td style={{ padding: '4px 8px', fontSize: '8px', color: '#1e293b', textAlign: 'right' }}>{formatCurrency(item.unit_price)}</td>
-                <td style={{ padding: '4px 8px', fontSize: '8px', color: '#1e293b', textAlign: 'right', fontWeight: '600' }}>{formatCurrency(calcLineTotal(item))}</td>
+                <td style={{ padding: '3px 6px', fontSize: '7px', color: '#64748b' }}>{i + 1}</td>
+                <td style={{ padding: '3px 6px', fontSize: '7px', color: '#1e293b', fontWeight: '500' }}>{item.description}</td>
+                <td style={{ padding: '3px 6px', fontSize: '7px', color: '#1e293b', textAlign: 'center' }}>{item.quantity}</td>
+                <td style={{ padding: '3px 6px', fontSize: '7px', color: '#1e293b', textAlign: 'right' }}>{formatCurrency(item.unit_price)}</td>
+                <td style={{ padding: '3px 6px', fontSize: '7px', color: '#1e293b', textAlign: 'right', fontWeight: '600' }}>{formatCurrency(calcLineTotal(item))}</td>
               </tr>
             )
           })}
@@ -143,44 +139,44 @@ function QuotationTemplate({ quotation, items }) {
       </table>
 
       {/* Totals */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
-        <div style={{ width: '240px', border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 12px', borderBottom: '1px solid #e2e8f0', fontSize: '8px', backgroundColor: '#f8fafc' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+        <div style={{ width: '220px', border: '1px solid #e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 10px', borderBottom: '1px solid #e2e8f0', fontSize: '7px', backgroundColor: '#f8fafc' }}>
             <span style={{ color: '#64748b' }}>Subtotal (Excl. VAT):</span>
             <span style={{ color: '#1e293b', fontWeight: '600' }}>{formatCurrency(subtotal)}</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 12px', borderBottom: '1px solid #e2e8f0', fontSize: '8px', backgroundColor: '#f8fafc' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 10px', borderBottom: '1px solid #e2e8f0', fontSize: '7px', backgroundColor: '#f8fafc' }}>
             <span style={{ color: '#64748b' }}>VAT (15%):</span>
             <span style={{ color: '#1e293b' }}>{formatCurrency(vatAmount)}</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', fontSize: '12px', fontWeight: 'bold', backgroundColor: COLORS.totalBg }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', fontSize: '11px', fontWeight: 'bold', backgroundColor: COLORS.totalBg }}>
             <span style={{ color: COLORS.dark }}>TOTAL (Incl. VAT):</span>
-            <span style={{ color: COLORS.dark, fontSize: '14px' }}>{formatCurrency(totalAmount)}</span>
+            <span style={{ color: COLORS.dark, fontSize: '13px' }}>{formatCurrency(totalAmount)}</span>
           </div>
         </div>
       </div>
 
       {/* Terms */}
-      <div style={{ marginBottom: '10px' }}>
-        <h3 style={{ fontSize: '8px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '3px' }}>Terms & Conditions</h3>
-        <p style={{ fontSize: '7px', color: '#94a3b8', lineHeight: '1.4', margin: '0' }}>
-          1. This quotation is valid for 30 days. 2. Payment terms: {quotation?.payment_terms || '50% Deposit, Balance on Completion'}. 3. All prices include VAT at 15%. 4. Services rendered as per agreed schedule. 5. Cancellation requires 30 days written notice.
+      <div style={{ marginBottom: '8px' }}>
+        <h3 style={{ fontSize: '7px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '2px' }}>Terms & Conditions</h3>
+        <p style={{ fontSize: '6px', color: '#94a3b8', lineHeight: '1.3', margin: '0' }}>
+          1. Valid for 30 days. 2. Payment: {quotation?.payment_terms || '50% Deposit, Balance on Completion'}. 3. Prices include VAT at 15%. 4. Services rendered per agreed schedule. 5. 30 days cancellation notice.
         </p>
       </div>
 
       {/* Notes */}
       {quotation?.notes && (
-        <div style={{ marginBottom: '10px', padding: '6px 10px', backgroundColor: '#f8fafc', borderRadius: '4px' }}>
-          <p style={{ fontSize: '7px', color: '#64748b', margin: '0' }}><strong>Notes:</strong> {quotation.notes}</p>
+        <div style={{ marginBottom: '8px', padding: '4px 8px', backgroundColor: '#f8fafc', borderRadius: '3px' }}>
+          <p style={{ fontSize: '6px', color: '#64748b', margin: '0' }}><strong>Notes:</strong> {quotation.notes}</p>
         </div>
       )}
 
       {/* Footer */}
-      <div style={{ position: 'absolute', bottom: '15mm', left: '20mm', right: '20mm', borderTop: `2px solid ${COLORS.main}`, paddingTop: '6px', textAlign: 'center' }}>
-        <p style={{ fontSize: '7px', color: '#94a3b8', margin: '0' }}>
+      <div style={{ position: 'absolute', bottom: '12mm', left: '18mm', right: '18mm', borderTop: `2px solid ${COLORS.main}`, paddingTop: '5px', textAlign: 'center' }}>
+        <p style={{ fontSize: '6px', color: '#94a3b8', margin: '0' }}>
           Ndanduleni Group (Pty) Ltd | Reg: 2020/123456/07 | VAT: 4567890123 | 123 Main Street, Johannesburg
         </p>
-        <p style={{ fontSize: '10px', color: COLORS.main, margin: '4px 0 0 0', fontWeight: 'bold' }}>
+        <p style={{ fontSize: '9px', color: COLORS.main, margin: '3px 0 0 0', fontWeight: 'bold' }}>
           Thank you for your business!
         </p>
       </div>
@@ -289,7 +285,7 @@ export default function CreateQuotation() {
     setItems(newItems)
   }
 
-  // Save, Download handlers
+  // Save handler
   var handleSave = async function(status) {
     status = status || 'draft'
     
@@ -337,6 +333,7 @@ export default function CreateQuotation() {
     }
   }
 
+  // Download PDF
   var downloadPDF = async function() {
     try {
       var html2pdf = (await import('html2pdf.js')).default
@@ -471,7 +468,7 @@ export default function CreateQuotation() {
                 <select value={quotationData.client_id} onChange={function(e) { handleClientSelect(e.target.value) }} className="w-full p-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300">
                   <option value="">Select Client</option>
                   {clients.map(function(client) {
-                    return <option key={client.id} value={client.id}>{client.company_name || client.first_name + ' ' + client.last_name}</option>
+                    return <option key={client.id} value={client.id}>{client.company_name || 'Client'}</option>
                   })}
                 </select>
                 <input type="text" value={quotationData.client_name} onChange={function(e) { setQuotationData({...quotationData, client_name: e.target.value}) }} placeholder="Client Name" className="w-full p-3 neu-inset rounded-xl text-slate-700 dark:text-slate-300" />
