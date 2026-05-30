@@ -35,6 +35,7 @@ export default function MobileHome() {
   const [jobSearch, setJobSearch] = useState('')
   const [selectedDate, setSelectedDate] = useState('all')
   const [activeTab, setActiveTab] = useState('all')
+  const [employeeId, setEmployeeId] = useState(null)
 
   useEffect(() => {
     loadData()
@@ -43,8 +44,10 @@ export default function MobileHome() {
   }, [])
 
   useEffect(() => {
-    loadAllJobs()
-  }, [selectedDate])
+    if (employeeId || user?.id) {
+      loadAllJobs()
+    }
+  }, [selectedDate, employeeId])
 
   useEffect(() => {
     const hour = currentTime.getHours()
@@ -54,10 +57,83 @@ export default function MobileHome() {
   }, [currentTime])
 
   const loadData = async () => {
-    if (user?.id) await fetchMyProfile(user.id)
+    if (user?.id) {
+      await fetchMyProfile(user.id)
+      await findEmployeeId()
+    }
     if (profile?.id) {
       await fetchMobileStats(profile.id)
       await fetchMyJobs(profile.id)
+    }
+  }
+
+  // Find the employee ID by email or user_id
+  const findEmployeeId = async () => {
+    try {
+      console.log('🔍 Finding employee for:', user?.email)
+      
+      // Try by user_id first
+      let { data: emp } = await supabase
+        .from('employees')
+        .select('id, email, user_id')
+        .eq('user_id', user?.id)
+        .single()
+
+      if (emp) {
+        console.log('✅ Found employee by user_id:', emp.id)
+        setEmployeeId(emp.id)
+        return
+      }
+
+      // Try by email
+      const { data: empByEmail } = await supabase
+        .from('employees')
+        .select('id, email, user_id')
+        .eq('email', user?.email)
+        .single()
+
+      if (empByEmail) {
+        console.log('✅ Found employee by email:', empByEmail.id)
+        // Update the user_id link for next time
+        await supabase.from('employees').update({ user_id: user?.id }).eq('id', empByEmail.id)
+        setEmployeeId(empByEmail.id)
+        return
+      }
+
+      // Try by profile (profiles table might have employee info)
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user?.id)
+        .single()
+
+      if (profileData) {
+        // Create employee record from profile
+        const { data: newEmp } = await supabase
+          .from('employees')
+          .insert([{
+            user_id: user?.id,
+            first_name: profileData.full_name?.split(' ')[0] || 'Cleaner',
+            last_name: profileData.full_name?.split(' ').slice(1).join(' ') || '',
+            email: user?.email,
+            employment_status: 'active',
+            department: 'Cleaning'
+          }])
+          .select()
+          .single()
+
+        if (newEmp) {
+          console.log('✅ Created employee record:', newEmp.id)
+          setEmployeeId(newEmp.id)
+          toast.success('Employee profile created!')
+          return
+        }
+      }
+
+      console.log('❌ No employee record found')
+      toast.error('No employee record found. Contact admin.')
+    } catch (error) {
+      console.error('Error finding employee:', error)
     }
   }
 
@@ -84,18 +160,13 @@ export default function MobileHome() {
         setAllOpenJobs(openJobs || [])
       }
 
-      // 2. Load THIS cleaner's active jobs (in_progress) - assigned to them
-      const { data: employee } = await supabase
-        .from('employees')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single()
-
-      if (employee) {
+      // 2. Load THIS cleaner's active jobs
+      const empId = employeeId || profile?.id
+      if (empId) {
         let myQuery = supabase
           .from('jobs')
           .select('*, clients(company_name, phone), job_categories(name, color)')
-          .eq('assigned_to', employee.id)
+          .eq('assigned_to', empId)
           .in('status', ['in_progress'])
           .order('scheduled_date', { ascending: true })
           .order('scheduled_start_time', { ascending: true })
@@ -107,8 +178,6 @@ export default function MobileHome() {
         const { data: myJobsData } = await myQuery
         console.log('👤 My Jobs loaded:', myJobsData?.length || 0)
         setMyActiveJobs(myJobsData || [])
-      } else {
-        console.log('⚠️ No employee record found for user:', user?.id)
       }
 
     } catch (error) {
@@ -158,37 +227,69 @@ export default function MobileHome() {
   // SELECT JOB - Moves from Open Pool to My Jobs
   const handleSelectJob = async (jobId) => {
     setUpdatingJob(jobId)
+    
     try {
-      const { data: employee } = await supabase
-        .from('employees')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single()
-
-      if (!employee) {
-        toast.error('Employee record not found. Contact admin.')
+      // Use the employee ID we found, or try profile ID as fallback
+      const empId = employeeId || profile?.id
+      
+      if (!empId) {
+        toast.error('Employee profile not found. Please contact admin.')
+        console.error('No employee ID available')
         return
       }
 
-      const { error } = await supabase
+      console.log('📝 Selecting job:', jobId, 'for employee:', empId)
+
+      const { data, error } = await supabase
         .from('jobs')
         .update({ 
           status: 'in_progress',
-          assigned_to: employee.id,
+          assigned_to: empId,
           actual_start_time: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
         .eq('id', jobId)
+        .select()
       
-      if (error) throw error
+      if (error) {
+        console.error('❌ Select job error:', error.message)
+        console.error('Full error:', error)
+        
+        // Check if the column exists
+        if (error.message.includes('assigned_to')) {
+          // Try without assigned_to
+          const { error: fallbackError } = await supabase
+            .from('jobs')
+            .update({ 
+              status: 'in_progress',
+              actual_start_time: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', jobId)
+          
+          if (fallbackError) {
+            console.error('❌ Fallback also failed:', fallbackError)
+            toast.error('Failed to select job: ' + fallbackError.message)
+          } else {
+            toast.success('Job selected! ✅')
+            loadAllJobs()
+          }
+        } else {
+          toast.error('Failed to select job: ' + error.message)
+        }
+        return
+      }
 
+      console.log('✅ Job selected successfully:', data)
       toast.success('Job selected! Moved to My Jobs ✅')
       loadAllJobs()
+      
     } catch (error) {
-      console.error('Select job error:', error)
+      console.error('❌ Exception:', error.message)
       toast.error('Failed to select job')
+    } finally {
+      setUpdatingJob(null)
     }
-    finally { setUpdatingJob(null) }
   }
 
   // COMPLETE JOB
