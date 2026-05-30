@@ -35,7 +35,6 @@ export default function EmployeeDetail() {
   const [leaveRecords, setLeaveRecords] = useState([])
   const [events, setEvents] = useState([])
   const [attachments, setAttachments] = useState([])
-  const [documents, setDocuments] = useState([])
   const [tabLoading, setTabLoading] = useState(false)
 
   // Dashboard stats
@@ -61,7 +60,15 @@ export default function EmployeeDetail() {
 
   useEffect(() => {
     if (selectedEmployee) {
-      setEditData({ ...selectedEmployee })
+      // Destructure to remove joined/related data before setting editData
+      const { 
+        contracts, 
+        leave_requests, 
+        training_records, 
+        disciplinary_records,
+        ...employeeOnly 
+      } = selectedEmployee
+      setEditData({ ...employeeOnly })
     }
   }, [selectedEmployee])
 
@@ -75,7 +82,6 @@ export default function EmployeeDetail() {
       loadLeaveRecords(),
       loadEvents(),
       loadAttachments(),
-      loadDocuments(),
       loadStats()
     ])
     setTabLoading(false)
@@ -145,7 +151,6 @@ export default function EmployeeDetail() {
   // 6. Events
   const loadEvents = async () => {
     if (!id) return
-    // Get events related to this employee (simplified)
     const { data } = await supabase
       .from('jobs')
       .select('*')
@@ -167,22 +172,10 @@ export default function EmployeeDetail() {
     setAttachments(data || [])
   }
 
-  // 8. Documents
-  const loadDocuments = async () => {
-    if (!id) return
-    const { data } = await supabase
-      .from('managed_documents')
-      .select('*')
-      .order('updated_at', { ascending: false })
-      .limit(10)
-    setDocuments(data || [])
-  }
-
   // Stats
   const loadStats = async () => {
     if (!id) return
     try {
-      // Get this week's hours
       const weekStart = new Date()
       weekStart.setDate(weekStart.getDate() - weekStart.getDay())
       
@@ -195,14 +188,12 @@ export default function EmployeeDetail() {
 
       const totalHours = weekAttendance?.reduce((s, a) => s + (a.total_hours || 0), 0) || 0
 
-      // Get leave balance
       const { data: leaveBal } = await supabase
         .from('leave_balances')
         .select('remaining_days')
         .eq('employee_id', id)
         .single()
 
-      // Get active jobs
       const { data: activeJobs } = await supabase
         .from('job_assignments')
         .select('*')
@@ -226,13 +217,34 @@ export default function EmployeeDetail() {
     }
   }
 
-  // Save Employee
+  // Save Employee - FIXED: Filter out joined data
   const handleSave = async () => {
     if (!editData.first_name || !editData.last_name || !editData.email) {
       toast.error('Name and email are required')
       return
     }
-    const result = await updateEmployee(id, editData)
+
+    // Filter out any joined/related fields before sending to API
+    const allowedFields = [
+      'first_name', 'last_name', 'email', 'phone', 'alternative_phone',
+      'address_line1', 'address_line2', 'city', 'state', 'postal_code',
+      'department', 'position', 'employment_type', 'employment_status',
+      'date_of_hire', 'date_of_birth', 'gender', 'marital_status',
+      'id_number', 'tax_number', 'bank_name', 'bank_account_number',
+      'bank_branch_code', 'emergency_contact_name', 'emergency_contact_phone',
+      'emergency_contact_relation', 'notes', 'profile_photo_url'
+    ]
+
+    const safeEditData = {}
+    allowedFields.forEach(field => {
+      if (editData[field] !== undefined) {
+        safeEditData[field] = editData[field] || null
+      }
+    })
+
+    console.log('Saving employee with safe data:', safeEditData)
+
+    const result = await updateEmployee(id, safeEditData)
     if (result.success) {
       toast.success('Employee updated!')
       setIsEditing(false)
@@ -342,9 +354,15 @@ export default function EmployeeDetail() {
         {/* Top Bar */}
         <div className="flex items-center gap-2 mb-3 flex-wrap px-2">
           <span className="text-base font-bold text-slate-700 dark:text-slate-300">Employee:</span>
-          <input value={`${editData?.first_name || employee.first_name} ${editData?.last_name || employee.last_name}`} readOnly={!isEditing}
-            onChange={e => { const [first, ...last] = e.target.value.split(' '); setEditData({...editData, first_name: first || '', last_name: last.join(' ') || ''}) }}
-            className="border border-[#2c73b6] bg-white dark:bg-slate-700 h-7 px-2 outline-none w-[340px] text-sm" />
+          <input 
+            value={`${editData?.first_name || employee.first_name} ${editData?.last_name || employee.last_name}`} 
+            readOnly={!isEditing}
+            onChange={e => { 
+              const [first, ...last] = e.target.value.split(' '); 
+              setEditData({...editData, first_name: first || '', last_name: last.join(' ') || ''}) 
+            }}
+            className="border border-[#2c73b6] bg-white dark:bg-slate-700 h-7 px-2 outline-none w-[340px] text-sm" 
+          />
           {isEditing ? (
             <>
               <button onClick={handleSave} className="neo-btn h-8 px-4 rounded-md bg-gradient-to-b from-[#4f8fd0] to-[#2d5f98] text-white font-bold text-sm">💾 Save</button>
@@ -569,7 +587,6 @@ export default function EmployeeDetail() {
                 <div className="text-center py-8">
                   <CreditCard className="w-12 h-12 text-slate-300 mx-auto mb-2" />
                   <p className="text-slate-500">No payroll details configured</p>
-                  <button onClick={() => navigate(`/payroll`)} className="mt-2 text-[#2c5f9b] underline text-sm">Configure in Payroll Module</button>
                 </div>
               )}
             </div>
@@ -695,8 +712,6 @@ export default function EmployeeDetail() {
         <div className="mt-4 border border-[#2f77bb]">
           <div className="flex gap-1.5 p-1.5 bg-[#c9dff2] dark:bg-slate-700 border-b border-[#2f77bb] flex-wrap">
             <button onClick={() => fileInputRef.current?.click()} className="neo-btn h-8 px-3 rounded-md bg-gradient-to-b from-[#4f8fd0] to-[#2d5f98] text-white font-bold text-xs">📎 Add Att.</button>
-            <button className="neo-btn h-8 px-3 rounded-md bg-gradient-to-b from-[#4f8fd0] to-[#2d5f98] text-white font-bold text-xs">👁 Show All</button>
-            <button className="neo-btn h-8 px-3 rounded-md bg-gradient-to-b from-red-500 to-red-700 text-white font-bold text-xs">❌ Delete Att.</button>
             <input ref={fileInputRef} type="file" className="hidden" onChange={handleAttachmentUpload} />
           </div>
           <table className="w-full border-collapse bg-white dark:bg-slate-800">
@@ -716,7 +731,7 @@ export default function EmployeeDetail() {
                   <td className="border border-[#b8ccdc] p-2 text-sm">{formatDate(doc.uploaded_at)}</td>
                   <td className="border border-[#b8ccdc] p-2 text-sm">
                     <div className="flex gap-1">
-                      <a href={doc.document_url} target="_blank" className="p-1 rounded hover:bg-blue-100"><Eye className="w-4 h-4 text-blue-600" /></a>
+                      <a href={doc.document_url} target="_blank" rel="noopener noreferrer" className="p-1 rounded hover:bg-blue-100"><Eye className="w-4 h-4 text-blue-600" /></a>
                       <a href={doc.document_url} download className="p-1 rounded hover:bg-emerald-100"><Download className="w-4 h-4 text-emerald-600" /></a>
                     </div>
                   </td>
