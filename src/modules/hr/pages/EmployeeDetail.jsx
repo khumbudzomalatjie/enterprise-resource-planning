@@ -7,9 +7,11 @@ import useThemeStore from '../../../store/themeStore'
 import { supabase } from '../../../lib/supabaseClient'
 import toast from 'react-hot-toast'
 import { 
-  User, Save, Plus, Trash2, Upload, ChevronRight, ArrowLeft,
+  User, Save, Upload, ChevronRight, ArrowLeft,
   Mail, Phone, MapPin, Calendar, Briefcase, Shield, Users,
-  Clock, CreditCard, FileText, Eye, Download, X, Paperclip
+  Clock, CreditCard, FileText, Eye, Download, Trash2,
+  CheckCircle2, XCircle, AlertCircle, BarChart3,
+  Building2, BookOpen, Star
 } from 'lucide-react'
 
 export default function EmployeeDetail() {
@@ -17,19 +19,43 @@ export default function EmployeeDetail() {
   const { selectedEmployee, fetchEmployee, updateEmployee, deleteEmployee, loading } = useHRStore()
   const { isDark, toggleTheme } = useThemeStore()
   const navigate = useNavigate()
-  const fileInputRef = useRef(null)
   const photoInputRef = useRef(null)
+  const fileInputRef = useRef(null)
 
   const [isEditing, setIsEditing] = useState(false)
   const [editData, setEditData] = useState(null)
   const [activeTab, setActiveTab] = useState('general')
   const [uploading, setUploading] = useState(false)
+  
+  // Live data states for each tab
+  const [attendanceRecords, setAttendanceRecords] = useState([])
+  const [payrollHistory, setPayrollHistory] = useState([])
+  const [payrollDetails, setPayrollDetails] = useState(null)
+  const [schedules, setSchedules] = useState([])
+  const [leaveRecords, setLeaveRecords] = useState([])
+  const [events, setEvents] = useState([])
   const [attachments, setAttachments] = useState([])
+  const [documents, setDocuments] = useState([])
+  const [tabLoading, setTabLoading] = useState(false)
+
+  // Dashboard stats
+  const [stats, setStats] = useState({
+    totalHoursThisWeek: 0,
+    totalHoursThisMonth: 0,
+    overtimeHours: 0,
+    leaveBalance: 0,
+    upcomingLeave: 0,
+    completedJobs: 0,
+    activeJobs: 0,
+    attendanceRate: 0,
+    lastPayroll: null,
+    nextSchedule: null
+  })
 
   useEffect(() => {
     if (id && id !== 'new') {
       fetchEmployee(id)
-      loadAttachments()
+      loadAllTabData()
     }
   }, [id])
 
@@ -39,8 +65,100 @@ export default function EmployeeDetail() {
     }
   }, [selectedEmployee])
 
+  const loadAllTabData = async () => {
+    setTabLoading(true)
+    await Promise.all([
+      loadAttendanceRecords(),
+      loadPayrollHistory(),
+      loadPayrollDetails(),
+      loadSchedules(),
+      loadLeaveRecords(),
+      loadEvents(),
+      loadAttachments(),
+      loadDocuments(),
+      loadStats()
+    ])
+    setTabLoading(false)
+  }
+
+  // 1. Time Clock History
+  const loadAttendanceRecords = async () => {
+    if (!id) return
+    const { data } = await supabase
+      .from('attendance_records')
+      .select('*')
+      .eq('employee_id', id)
+      .order('attendance_date', { ascending: false })
+      .limit(50)
+    setAttendanceRecords(data || [])
+  }
+
+  // 2. Payroll History
+  const loadPayrollHistory = async () => {
+    if (!id) return
+    const { data } = await supabase
+      .from('payslips')
+      .select('*, payroll_periods(period_name, period_start, period_end)')
+      .eq('employee_id', id)
+      .order('created_at', { ascending: false })
+      .limit(20)
+    setPayrollHistory(data || [])
+  }
+
+  // 3. Payroll Details
+  const loadPayrollDetails = async () => {
+    if (!id) return
+    const { data } = await supabase
+      .from('salary_structures')
+      .select('*')
+      .eq('employee_id', id)
+      .eq('is_active', true)
+      .single()
+    setPayrollDetails(data)
+  }
+
+  // 4. Schedules
+  const loadSchedules = async () => {
+    if (!id) return
+    const { data } = await supabase
+      .from('employee_shifts')
+      .select('*, shift_types(*), jobs(title, job_number, site_address, clients(company_name))')
+      .eq('employee_id', id)
+      .gte('shift_date', new Date().toISOString().split('T')[0])
+      .order('shift_date', { ascending: true })
+      .limit(30)
+    setSchedules(data || [])
+  }
+
+  // 5. Leave Records
+  const loadLeaveRecords = async () => {
+    if (!id) return
+    const { data } = await supabase
+      .from('leave_requests')
+      .select('*, leave_types(name)')
+      .eq('employee_id', id)
+      .order('created_at', { ascending: false })
+      .limit(20)
+    setLeaveRecords(data || [])
+  }
+
+  // 6. Events
+  const loadEvents = async () => {
+    if (!id) return
+    // Get events related to this employee (simplified)
+    const { data } = await supabase
+      .from('jobs')
+      .select('*')
+      .eq('assigned_to', id)
+      .gte('scheduled_date', new Date().toISOString().split('T')[0])
+      .order('scheduled_date', { ascending: true })
+      .limit(10)
+    setEvents(data || [])
+  }
+
+  // 7. Attachments
   const loadAttachments = async () => {
-    // Load employee documents
+    if (!id) return
     const { data } = await supabase
       .from('employee_documents')
       .select('*')
@@ -49,6 +167,66 @@ export default function EmployeeDetail() {
     setAttachments(data || [])
   }
 
+  // 8. Documents
+  const loadDocuments = async () => {
+    if (!id) return
+    const { data } = await supabase
+      .from('managed_documents')
+      .select('*')
+      .order('updated_at', { ascending: false })
+      .limit(10)
+    setDocuments(data || [])
+  }
+
+  // Stats
+  const loadStats = async () => {
+    if (!id) return
+    try {
+      // Get this week's hours
+      const weekStart = new Date()
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay())
+      
+      const { data: weekAttendance } = await supabase
+        .from('attendance_records')
+        .select('total_hours')
+        .eq('employee_id', id)
+        .gte('attendance_date', weekStart.toISOString().split('T')[0])
+        .not('total_hours', 'is', null)
+
+      const totalHours = weekAttendance?.reduce((s, a) => s + (a.total_hours || 0), 0) || 0
+
+      // Get leave balance
+      const { data: leaveBal } = await supabase
+        .from('leave_balances')
+        .select('remaining_days')
+        .eq('employee_id', id)
+        .single()
+
+      // Get active jobs
+      const { data: activeJobs } = await supabase
+        .from('job_assignments')
+        .select('*')
+        .eq('employee_id', id)
+        .eq('status', 'assigned')
+
+      setStats({
+        totalHoursThisWeek: totalHours,
+        totalHoursThisMonth: totalHours * 4,
+        overtimeHours: Math.max(0, totalHours - 40),
+        leaveBalance: leaveBal?.remaining_days || 0,
+        upcomingLeave: leaveRecords.filter(l => l.status === 'approved' && l.start_date > new Date().toISOString().split('T')[0]).length,
+        completedJobs: attendanceRecords?.filter(a => a.status === 'present').length || 0,
+        activeJobs: activeJobs?.length || 0,
+        attendanceRate: attendanceRecords?.length > 0 ? Math.round((attendanceRecords.filter(a => a.status === 'present').length / attendanceRecords.length) * 100) : 0,
+        lastPayroll: payrollHistory?.[0] || null,
+        nextSchedule: schedules?.[0] || null
+      })
+    } catch (e) {
+      console.error('Stats error:', e)
+    }
+  }
+
+  // Save Employee
   const handleSave = async () => {
     if (!editData.first_name || !editData.last_name || !editData.email) {
       toast.error('Name and email are required')
@@ -66,11 +244,9 @@ export default function EmployeeDetail() {
 
   const handleDelete = async () => {
     if (window.confirm('Terminate this employee?')) {
-      const result = await deleteEmployee(id)
-      if (result.success) {
-        toast.success('Employee terminated')
-        navigate('/hr/employees')
-      }
+      await deleteEmployee(id)
+      toast.success('Employee terminated')
+      navigate('/hr/employees')
     }
   }
 
@@ -82,15 +258,9 @@ export default function EmployeeDetail() {
     try {
       const fileExt = file.name.split('.').pop()
       const fileName = `employee-photos/${id}-${Date.now()}.${fileExt}`
-      
-      const { error: uploadError } = await supabase.storage
-        .from('fleet')
-        .upload(fileName, file, { upsert: true })
-
+      const { error: uploadError } = await supabase.storage.from('fleet').upload(fileName, file, { upsert: true })
       if (uploadError) throw uploadError
-
       const { data: { publicUrl } } = supabase.storage.from('fleet').getPublicUrl(fileName)
-      
       await updateEmployee(id, { profile_photo_url: publicUrl })
       fetchEmployee(id)
       toast.success('Photo updated!')
@@ -107,90 +277,54 @@ export default function EmployeeDetail() {
     try {
       const fileExt = file.name.split('.').pop()
       const fileName = `employee-docs/${id}/${Date.now()}-${file.name}`
-      
-      const { error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(fileName, file, { upsert: true })
-
-      if (uploadError) throw uploadError
-
+      const { error } = await supabase.storage.from('documents').upload(fileName, file, { upsert: true })
+      if (error) throw error
       const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(fileName)
-
       await supabase.from('employee_documents').insert([{
-        employee_id: id,
-        document_type: 'other',
-        document_name: file.name,
-        document_url: publicUrl,
-        uploaded_by: (await supabase.auth.getUser()).data.user?.id
+        employee_id: id, document_type: 'other', document_name: file.name, document_url: publicUrl
       }])
-
       toast.success('Document attached!')
       loadAttachments()
     } catch (error) {
-      toast.error('Failed to upload document')
+      toast.error('Failed to upload')
     }
   }
 
-  const handleDeleteAttachment = async (docId) => {
-    if (window.confirm('Delete this attachment?')) {
-      await supabase.from('employee_documents').delete().eq('id', docId)
-      toast.success('Attachment deleted')
-      loadAttachments()
-    }
-  }
+  const formatCurrency = (amount) => new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(amount || 0)
+  const formatDate = (date) => date ? new Date(date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'
+  const formatTime = (date) => date ? new Date(date).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }) : '-'
 
-  const formatDate = (date) => date ? new Date(date).toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' }) : ''
-
-  // Loading
-  if (loading) {
-    return (
-      <div className={`min-h-screen font-['Inter'] transition-colors duration-300 ${isDark ? 'dark' : ''}`}>
-        <Navbar />
-        <div className="min-h-[80vh] flex items-center justify-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#2c5f9b]"></div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!selectedEmployee) {
-    return (
-      <div className={`min-h-screen font-['Inter'] transition-colors duration-300 ${isDark ? 'dark' : ''}`}>
-        <Navbar />
-        <div className="min-h-[80vh] flex items-center justify-center">
-          <div className="text-center">
-            <Users className="w-20 h-20 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500 text-lg">Employee not found</p>
-            <button onClick={() => navigate('/hr/employees')} className="mt-4 px-6 py-3 rounded-xl bg-[#2d5f98] text-white">Back to Employees</button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  const employee = selectedEmployee
   const inputClass = "w-full border border-[#2c73b6] bg-[#f7f7c2] h-[30px] px-2 outline-none text-sm"
   const labelCellClass = "cell label-cell justify-end font-bold bg-[#d7e5f2] dark:bg-slate-700"
   const valueCellClass = "cell bg-[#dce8f5] dark:bg-slate-600"
 
   const tabs = [
-    { id: 'general', label: 'General Info' },
-    { id: 'attendance', label: 'Time Clock History' },
-    { id: 'payroll', label: 'Payroll History' },
-    { id: 'details', label: 'Payroll & Details' },
-    { id: 'schedule', label: 'Scheduling' },
-    { id: 'leave', label: 'Leave' },
-    { id: 'events', label: 'Events' },
+    { id: 'general', label: 'General Info', icon: '📋' },
+    { id: 'attendance', label: 'Time Clock', icon: '⏰' },
+    { id: 'payroll', label: 'Payroll History', icon: '💰' },
+    { id: 'details', label: 'Payroll Details', icon: '💳' },
+    { id: 'schedule', label: 'Scheduling', icon: '📅' },
+    { id: 'leave', label: 'Leave', icon: '🏖️' },
+    { id: 'events', label: 'Events', icon: '📢' },
   ]
+
+  if (loading || !selectedEmployee) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2c5f9b]"></div>
+      </div>
+    )
+  }
+
+  const employee = selectedEmployee
 
   return (
     <div className="min-h-screen bg-[#d8d8d8] dark:bg-slate-900 font-['Inter'] transition-colors duration-300">
       <Navbar />
-
       <main className="max-w-7xl mx-auto px-2 sm:px-4 pt-4 pb-16">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 mb-2 text-sm px-2">
-          <Link to="/hr" className="text-[#2c5f9b] hover:underline">HR Management</Link>
+          <Link to="/hr" className="text-[#2c5f9b] hover:underline">HR</Link>
           <ChevronRight className="w-4 h-4 text-slate-400" />
           <Link to="/hr/employees" className="text-[#2c5f9b] hover:underline">Employees</Link>
           <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -200,8 +334,7 @@ export default function EmployeeDetail() {
         {/* Title */}
         <div className="flex items-center justify-center relative mb-3">
           <div className="absolute left-4 text-[50px] text-[#2f5f9b]">👥</div>
-          <h1 className="text-[60px] md:text-[70px] text-[#2c5f9b] tracking-wider font-black uppercase" 
-            style={{ fontFamily: "'Alumni Sans Pinstripe', sans-serif" }}>
+          <h1 className="text-[50px] md:text-[60px] text-[#2c5f9b] tracking-wider font-black uppercase" style={{ fontFamily: "'Alumni Sans Pinstripe', sans-serif" }}>
             Employee Manager
           </h1>
         </div>
@@ -209,285 +342,391 @@ export default function EmployeeDetail() {
         {/* Top Bar */}
         <div className="flex items-center gap-2 mb-3 flex-wrap px-2">
           <span className="text-base font-bold text-slate-700 dark:text-slate-300">Employee:</span>
-          <input 
-            value={`${editData?.first_name || employee.first_name} ${editData?.last_name || employee.last_name}`}
-            onChange={e => {
-              const [first, ...last] = e.target.value.split(' ')
-              setEditData({...editData, first_name: first || '', last_name: last.join(' ') || ''})
-            }}
-            className="border border-[#2c73b6] bg-white dark:bg-slate-700 h-7 px-2 outline-none w-[340px] text-sm"
-            readOnly={!isEditing}
-          />
-
+          <input value={`${editData?.first_name || employee.first_name} ${editData?.last_name || employee.last_name}`} readOnly={!isEditing}
+            onChange={e => { const [first, ...last] = e.target.value.split(' '); setEditData({...editData, first_name: first || '', last_name: last.join(' ') || ''}) }}
+            className="border border-[#2c73b6] bg-white dark:bg-slate-700 h-7 px-2 outline-none w-[340px] text-sm" />
           {isEditing ? (
             <>
-              <button onClick={handleSave} className="neo-btn h-8 px-4 rounded-md bg-gradient-to-b from-[#4f8fd0] to-[#2d5f98] text-white font-bold text-sm hover:opacity-90 flex items-center gap-1">
-                <Save className="w-4 h-4" /> Save
-              </button>
-              <button onClick={() => { setIsEditing(false); setEditData({...employee}) }} className="neo-btn h-8 px-4 rounded-md bg-gradient-to-b from-gray-400 to-gray-600 text-white font-bold text-sm">
-                Cancel
-              </button>
+              <button onClick={handleSave} className="neo-btn h-8 px-4 rounded-md bg-gradient-to-b from-[#4f8fd0] to-[#2d5f98] text-white font-bold text-sm">💾 Save</button>
+              <button onClick={() => { setIsEditing(false); setEditData({...employee}) }} className="neo-btn h-8 px-4 rounded-md bg-gradient-to-b from-gray-400 to-gray-600 text-white font-bold text-sm">Cancel</button>
             </>
           ) : (
             <>
-              <button onClick={() => setIsEditing(true)} className="neo-btn h-8 px-4 rounded-md bg-gradient-to-b from-[#4f8fd0] to-[#2d5f98] text-white font-bold text-sm">
-                ✏️ Edit
-              </button>
-              <button onClick={handleDelete} className="neo-btn h-8 px-4 rounded-md bg-gradient-to-b from-red-500 to-red-700 text-white font-bold text-sm">
-                🗑 Terminate
-              </button>
+              <button onClick={() => setIsEditing(true)} className="neo-btn h-8 px-4 rounded-md bg-gradient-to-b from-[#4f8fd0] to-[#2d5f98] text-white font-bold text-sm">✏️ Edit</button>
+              <button onClick={handleDelete} className="neo-btn h-8 px-4 rounded-md bg-gradient-to-b from-red-500 to-red-700 text-white font-bold text-sm">🗑 Terminate</button>
             </>
           )}
-
-          <span className="text-base font-bold text-slate-700 dark:text-slate-300 ml-4">Empl. ID:</span>
+          <span className="text-base font-bold text-slate-700 dark:text-slate-300 ml-4">ID:</span>
           <input value={employee.employee_code || ''} className="border border-[#2c73b6] bg-white dark:bg-slate-700 h-7 px-2 outline-none w-[140px] text-sm" readOnly />
+        </div>
+
+        {/* Stats Bar */}
+        <div className="grid grid-cols-4 md:grid-cols-8 gap-2 mb-3 px-2">
+          {[
+            { label: 'Hours/Week', value: stats.totalHoursThisWeek.toFixed(1) },
+            { label: 'Overtime', value: stats.overtimeHours.toFixed(1) + 'h' },
+            { label: 'Leave Bal', value: stats.leaveBalance + 'd' },
+            { label: 'Attendance', value: stats.attendanceRate + '%' },
+            { label: 'Active Jobs', value: stats.activeJobs },
+            { label: 'Completed', value: stats.completedJobs },
+            { label: 'Upcoming Leave', value: stats.upcomingLeave },
+            { label: 'Status', value: employee.employment_status?.replace('_', ' ') },
+          ].map((s, i) => (
+            <div key={i} className="bg-white dark:bg-slate-700 border border-[#2f77bb] rounded-md p-1.5 text-center">
+              <p className="text-[10px] text-slate-500">{s.label}</p>
+              <p className="text-sm font-bold text-slate-800 dark:text-white capitalize">{s.value}</p>
+            </div>
+          ))}
         </div>
 
         {/* Tabs */}
         <div className="grid grid-cols-7 border border-[#2f77bb] mb-0">
           {tabs.map(tab => (
-            <div key={tab.id} 
-              onClick={() => setActiveTab(tab.id)}
+            <div key={tab.id} onClick={() => setActiveTab(tab.id)}
               className={`text-center py-2 text-sm font-bold cursor-pointer border-r border-[#2f77bb] last:border-r-0 transition-colors ${
-                activeTab === tab.id 
-                  ? 'bg-[#f4f4f4] dark:bg-slate-600 text-slate-800 dark:text-white' 
-                  : 'bg-[#d3e1ef] dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-[#c5d8ec]'
+                activeTab === tab.id ? 'bg-[#f4f4f4] dark:bg-slate-600 text-slate-800 dark:text-white' : 'bg-[#d3e1ef] dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-[#c5d8ec]'
               }`}>
-              {tab.label}
+              {tab.icon} {tab.label}
             </div>
           ))}
         </div>
 
-        {/* Content */}
-        {activeTab === 'general' && (
-          <div className="border border-[#2f77bb] bg-[#d7e5f2] dark:bg-slate-800 grid grid-cols-1 lg:grid-cols-[1fr_170px] gap-5 p-2.5">
-            {/* Form Grid */}
-            <div>
-              <div className="grid grid-cols-[140px_1fr_140px_1fr] border-t border-l border-[#2f77bb]">
-                {/* Last Name */}
-                <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Last Name:</div>
-                <div className={valueCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
-                  {isEditing ? <input value={editData?.last_name || ''} onChange={e => setEditData({...editData, last_name: e.target.value})} className={inputClass} /> 
-                    : <span className="text-sm">{employee.last_name}</span>}
-                </div>
-
-                {/* First Name */}
-                <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>First Name:</div>
-                <div className={valueCellClass + " border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
-                  {isEditing ? <input value={editData?.first_name || ''} onChange={e => setEditData({...editData, first_name: e.target.value})} className={inputClass} /> 
-                    : <span className="text-sm">{employee.first_name}</span>}
-                </div>
-
-                {/* Address */}
-                <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Address:</div>
-                <div className={valueCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"} style={{gridColumn: 'span 3'}}>
-                  {isEditing ? <input value={editData?.address_line1 || ''} onChange={e => setEditData({...editData, address_line1: e.target.value})} className={inputClass} /> 
-                    : <span className="text-sm">{employee.address_line1 || '-'}</span>}
-                </div>
-
-                {/* City */}
-                <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>City:</div>
-                <div className={valueCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
-                  {isEditing ? <input value={editData?.city || ''} onChange={e => setEditData({...editData, city: e.target.value})} className={inputClass} /> 
-                    : <span className="text-sm">{employee.city || '-'}</span>}
-                </div>
-
-                {/* State */}
-                <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>State:</div>
-                <div className={valueCellClass + " border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
-                  {isEditing ? <input value={editData?.state || ''} onChange={e => setEditData({...editData, state: e.target.value})} className={inputClass} /> 
-                    : <span className="text-sm">{employee.state || '-'}</span>}
-                </div>
-
-                {/* Zip Code */}
-                <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Zip Code:</div>
-                <div className={valueCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
-                  {isEditing ? <input value={editData?.postal_code || ''} onChange={e => setEditData({...editData, postal_code: e.target.value})} className={inputClass} /> 
-                    : <span className="text-sm">{employee.postal_code || '-'}</span>}
-                </div>
-
-                {/* Email */}
-                <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Email:</div>
-                <div className={valueCellClass + " border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"} style={{gridColumn: 'span 3'}}>
-                  {isEditing ? <input value={editData?.email || ''} onChange={e => setEditData({...editData, email: e.target.value})} className={inputClass} /> 
-                    : <span className="text-sm">{employee.email}</span>}
-                </div>
-
-                {/* Cell Phone */}
-                <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Cell Phone:</div>
-                <div className={valueCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
-                  {isEditing ? <input value={editData?.phone || ''} onChange={e => setEditData({...editData, phone: e.target.value})} className={inputClass} /> 
-                    : <span className="text-sm">{employee.phone || '-'}</span>}
-                </div>
-
-                {/* Status */}
-                <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Status:</div>
-                <div className={valueCellClass + " border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
-                  {isEditing ? (
-                    <select value={editData?.employment_status || ''} onChange={e => setEditData({...editData, employment_status: e.target.value})} className={inputClass}>
-                      <option value="active">Active</option>
-                      <option value="on_leave">On Leave</option>
-                      <option value="inactive">Inactive</option>
-                      <option value="suspended">Suspended</option>
-                    </select>
-                  ) : (
-                    <span className="text-sm capitalize">{employee.employment_status?.replace('_', ' ') || '-'}</span>
-                  )}
-                </div>
-
-                {/* Other Phone */}
-                <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Other Phone:</div>
-                <div className={valueCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
-                  {isEditing ? <input value={editData?.alternative_phone || ''} onChange={e => setEditData({...editData, alternative_phone: e.target.value})} className={inputClass} /> 
-                    : <span className="text-sm">{employee.alternative_phone || '-'}</span>}
-                </div>
-
-                {/* Type / Position */}
-                <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Type / Position:</div>
-                <div className={valueCellClass + " border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
-                  {isEditing ? <input value={editData?.position || ''} onChange={e => setEditData({...editData, position: e.target.value})} className={inputClass} /> 
-                    : <span className="text-sm">{employee.position || '-'}</span>}
-                </div>
-
-                {/* Department */}
-                <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Department:</div>
-                <div className={valueCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
-                  {isEditing ? <input value={editData?.department || ''} onChange={e => setEditData({...editData, department: e.target.value})} className={inputClass} /> 
-                    : <span className="text-sm">{employee.department || '-'}</span>}
-                </div>
-
-                {/* Date Hired */}
-                <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Date Hired:</div>
-                <div className={valueCellClass + " border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
-                  {isEditing ? <input type="date" value={editData?.date_of_hire || ''} onChange={e => setEditData({...editData, date_of_hire: e.target.value})} className={inputClass} /> 
-                    : <span className="text-sm">{formatDate(employee.date_of_hire)}</span>}
-                </div>
-
-                {/* ID Number */}
-                <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>ID Number:</div>
-                <div className={valueCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
-                  {isEditing ? <input value={editData?.id_number || ''} onChange={e => setEditData({...editData, id_number: e.target.value})} className={inputClass} /> 
-                    : <span className="text-sm">{employee.id_number || '-'}</span>}
-                </div>
-
-                {/* Tax Number */}
-                <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Tax Number:</div>
-                <div className={valueCellClass + " border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
-                  {isEditing ? <input value={editData?.tax_number || ''} onChange={e => setEditData({...editData, tax_number: e.target.value})} className={inputClass} /> 
-                    : <span className="text-sm">{employee.tax_number || '-'}</span>}
-                </div>
-
-                {/* Bank Name */}
-                <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Bank Name:</div>
-                <div className={valueCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
-                  {isEditing ? <input value={editData?.bank_name || ''} onChange={e => setEditData({...editData, bank_name: e.target.value})} className={inputClass} /> 
-                    : <span className="text-sm">{employee.bank_name || '-'}</span>}
-                </div>
-
-                {/* Account Number */}
-                <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Account #:</div>
-                <div className={valueCellClass + " border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
-                  {isEditing ? <input value={editData?.bank_account_number || ''} onChange={e => setEditData({...editData, bank_account_number: e.target.value})} className={inputClass} /> 
-                    : <span className="text-sm">{employee.bank_account_number || '-'}</span>}
-                </div>
-
-                {/* Emergency Contact */}
-                <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Emerg. Contact:</div>
-                <div className={valueCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
-                  {isEditing ? <input value={editData?.emergency_contact_name || ''} onChange={e => setEditData({...editData, emergency_contact_name: e.target.value})} className={inputClass} /> 
-                    : <span className="text-sm">{employee.emergency_contact_name || '-'}</span>}
-                </div>
-
-                {/* Emergency Phone */}
-                <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Emerg. Phone:</div>
-                <div className={valueCellClass + " border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
-                  {isEditing ? <input value={editData?.emergency_contact_phone || ''} onChange={e => setEditData({...editData, emergency_contact_phone: e.target.value})} className={inputClass} /> 
-                    : <span className="text-sm">{employee.emergency_contact_phone || '-'}</span>}
+        {/* Tab Content */}
+        <div className="border border-[#2f77bb] bg-[#d7e5f2] dark:bg-slate-800 p-2.5 min-h-[400px]">
+          
+          {/* GENERAL INFO TAB */}
+          {activeTab === 'general' && (
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_170px] gap-5">
+              <div>
+                <div className="grid grid-cols-[140px_1fr_140px_1fr] border-t border-l border-[#2f77bb]">
+                  <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Last Name:</div>
+                  <div className={valueCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
+                    {isEditing ? <input value={editData?.last_name || ''} onChange={e => setEditData({...editData, last_name: e.target.value})} className={inputClass} /> : <span>{employee.last_name}</span>}
+                  </div>
+                  <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>First Name:</div>
+                  <div className={valueCellClass + " border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
+                    {isEditing ? <input value={editData?.first_name || ''} onChange={e => setEditData({...editData, first_name: e.target.value})} className={inputClass} /> : <span>{employee.first_name}</span>}
+                  </div>
+                  <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Email:</div>
+                  <div className={valueCellClass + " border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"} style={{gridColumn: 'span 3'}}>
+                    {isEditing ? <input value={editData?.email || ''} onChange={e => setEditData({...editData, email: e.target.value})} className={inputClass} /> : <span>{employee.email}</span>}
+                  </div>
+                  <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Phone:</div>
+                  <div className={valueCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
+                    {isEditing ? <input value={editData?.phone || ''} onChange={e => setEditData({...editData, phone: e.target.value})} className={inputClass} /> : <span>{employee.phone || '-'}</span>}
+                  </div>
+                  <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Position:</div>
+                  <div className={valueCellClass + " border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
+                    {isEditing ? <input value={editData?.position || ''} onChange={e => setEditData({...editData, position: e.target.value})} className={inputClass} /> : <span>{employee.position || '-'}</span>}
+                  </div>
+                  <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Department:</div>
+                  <div className={valueCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
+                    {isEditing ? <input value={editData?.department || ''} onChange={e => setEditData({...editData, department: e.target.value})} className={inputClass} /> : <span>{employee.department || '-'}</span>}
+                  </div>
+                  <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Status:</div>
+                  <div className={valueCellClass + " border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
+                    {isEditing ? (
+                      <select value={editData?.employment_status || ''} onChange={e => setEditData({...editData, employment_status: e.target.value})} className={inputClass}>
+                        <option value="active">Active</option><option value="on_leave">On Leave</option><option value="inactive">Inactive</option>
+                      </select>
+                    ) : <span className="capitalize">{employee.employment_status?.replace('_', ' ')}</span>}
+                  </div>
+                  <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Date Hired:</div>
+                  <div className={valueCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"}>
+                    {isEditing ? <input type="date" value={editData?.date_of_hire || ''} onChange={e => setEditData({...editData, date_of_hire: e.target.value})} className={inputClass} /> : <span>{formatDate(employee.date_of_hire)}</span>}
+                  </div>
+                  <div className={labelCellClass + " border-r border-b border-[#2f77bb] min-h-[38px] flex items-center justify-end px-2"}>Address:</div>
+                  <div className={valueCellClass + " border-b border-[#2f77bb] min-h-[38px] flex items-center px-2"} style={{gridColumn: 'span 3'}}>
+                    {isEditing ? <input value={editData?.address_line1 || ''} onChange={e => setEditData({...editData, address_line1: e.target.value})} className={inputClass} /> : <span>{employee.address_line1 || '-'}</span>}
+                  </div>
                 </div>
               </div>
-
-              {/* Attachments Section */}
-              <div className="mt-4 border border-[#2f77bb]">
-                <div className="flex gap-1.5 p-1.5 bg-[#c9dff2] dark:bg-slate-700 border-b border-[#2f77bb] flex-wrap">
-                  <button onClick={() => fileInputRef.current?.click()} className="neo-btn h-8 px-3 rounded-md bg-gradient-to-b from-[#4f8fd0] to-[#2d5f98] text-white font-bold text-xs flex items-center gap-1">
-                    <Paperclip className="w-3 h-3" /> Add Att.
-                  </button>
-                  <button className="neo-btn h-8 px-3 rounded-md bg-gradient-to-b from-[#4f8fd0] to-[#2d5f98] text-white font-bold text-xs">👁 Show All</button>
-                  <button className="neo-btn h-8 px-3 rounded-md bg-gradient-to-b from-[#4f8fd0] to-[#2d5f98] text-white font-bold text-xs">📂 Open</button>
-                  <button className="neo-btn h-8 px-3 rounded-md bg-gradient-to-b from-red-500 to-red-700 text-white font-bold text-xs">❌ Delete Att.</button>
-                  <input ref={fileInputRef} type="file" className="hidden" onChange={handleAttachmentUpload} />
+              {/* Photo Panel */}
+              <div className="border border-[#2f77bb] bg-[#dce8f5] dark:bg-slate-700 flex flex-col items-center justify-center p-2.5">
+                <div className="w-[150px] h-[170px] border-[3px] border-[#3569a3] bg-[#edf3f9] dark:bg-slate-600 flex items-center justify-center overflow-hidden">
+                  {employee.profile_photo_url ? <img src={employee.profile_photo_url} alt="" className="w-full h-full object-cover" />
+                    : <img src="https://cdn-icons-png.flaticon.com/512/847/847969.png" alt="" className="w-full h-full object-contain p-4" />}
                 </div>
+                <button onClick={() => photoInputRef.current?.click()} className="mt-2.5 text-[#0066cc] font-bold cursor-pointer text-sm">📷 {uploading ? 'Uploading...' : 'Add Picture'}</button>
+                <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+              </div>
+            </div>
+          )}
 
-                <table className="w-full border-collapse bg-white dark:bg-slate-800">
+          {/* TIME CLOCK HISTORY TAB */}
+          {activeTab === 'attendance' && (
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-slate-700 dark:text-slate-300">⏰ Time Clock History</h3>
+                <span className="text-xs text-slate-500">{attendanceRecords.length} records</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
                   <thead>
-                    <tr>
-                      <th className="bg-[#d4e6f7] dark:bg-slate-600 border border-[#2f77bb] dark:border-slate-500 p-2 text-sm">File Name</th>
-                      <th className="bg-[#d4e6f7] dark:bg-slate-600 border border-[#2f77bb] dark:border-slate-500 p-2 text-sm">File Type</th>
-                      <th className="bg-[#d4e6f7] dark:bg-slate-600 border border-[#2f77bb] dark:border-slate-500 p-2 text-sm">File Path</th>
-                      <th className="bg-[#d4e6f7] dark:bg-slate-600 border border-[#2f77bb] dark:border-slate-500 p-2 text-sm">Added On</th>
-                      <th className="bg-[#d4e6f7] dark:bg-slate-600 border border-[#2f77bb] dark:border-slate-500 p-2 text-sm">Actions</th>
+                    <tr className="bg-[#2e75b6] text-white">
+                      <th className="p-2 text-left border border-[#1a5fa0]">Date</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Clock In</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Clock Out</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Hours</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Method</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Status</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Location</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {attachments.length > 0 ? attachments.map(doc => (
-                      <tr key={doc.id}>
-                        <td className="border border-[#2f77bb] dark:border-slate-500 p-2 text-sm">{doc.document_name}</td>
-                        <td className="border border-[#2f77bb] dark:border-slate-500 p-2 text-sm capitalize">{doc.document_type}</td>
-                        <td className="border border-[#2f77bb] dark:border-slate-500 p-2 text-sm truncate max-w-[200px]">
-                          <a href={doc.document_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs">{doc.document_url?.slice(0, 50)}...</a>
+                    {attendanceRecords.map(record => (
+                      <tr key={record.id} className="bg-white dark:bg-slate-700 even:bg-slate-50 dark:even:bg-slate-600">
+                        <td className="p-2 border border-[#b8ccdc]">{formatDate(record.attendance_date)}</td>
+                        <td className="p-2 border border-[#b8ccdc]">{formatTime(record.clock_in_time)}</td>
+                        <td className="p-2 border border-[#b8ccdc]">{formatTime(record.clock_out_time)}</td>
+                        <td className="p-2 border border-[#b8ccdc] font-bold">{record.total_hours?.toFixed(1) || '-'}</td>
+                        <td className="p-2 border border-[#b8ccdc] capitalize">{record.check_in_method?.replace('_', ' ') || '-'}</td>
+                        <td className="p-2 border border-[#b8ccdc]">
+                          <span className={`px-2 py-0.5 rounded-full text-xs ${record.status === 'present' ? 'bg-emerald-100 text-emerald-700' : record.is_late ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                            {record.is_late ? 'Late' : record.status}
+                          </span>
                         </td>
-                        <td className="border border-[#2f77bb] dark:border-slate-500 p-2 text-sm">{formatDate(doc.uploaded_at)}</td>
-                        <td className="border border-[#2f77bb] dark:border-slate-500 p-2 text-sm">
-                          <div className="flex gap-1">
-                            <a href={doc.document_url} target="_blank" rel="noopener noreferrer" className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30" title="View"><Eye className="w-4 h-4 text-blue-600" /></a>
-                            <a href={doc.document_url} download className="p-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/30" title="Download"><Download className="w-4 h-4 text-emerald-600" /></a>
-                            <button onClick={() => handleDeleteAttachment(doc.id)} className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30" title="Delete"><Trash2 className="w-4 h-4 text-red-600" /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    )) : (
-                      <tr>
-                        <td colSpan={5} className="border border-[#2f77bb] dark:border-slate-500 p-4 text-center text-slate-400 italic bg-[#f7fbff] dark:bg-slate-700">
-                          No attachments available
+                        <td className="p-2 border border-[#b8ccdc] text-xs">
+                          {record.check_in_latitude ? `${record.check_in_latitude.toFixed(4)}, ${record.check_in_longitude.toFixed(4)}` : '-'}
                         </td>
                       </tr>
-                    )}
+                    ))}
                   </tbody>
                 </table>
+                {attendanceRecords.length === 0 && <p className="text-center text-slate-400 py-8">No attendance records found</p>}
               </div>
             </div>
+          )}
 
-            {/* Photo Panel */}
-            <div className="border border-[#2f77bb] bg-[#dce8f5] dark:bg-slate-700 flex flex-col items-center justify-center p-2.5">
-              <div className="w-[150px] h-[170px] border-[3px] border-[#3569a3] dark:border-slate-500 bg-[#edf3f9] dark:bg-slate-600 flex items-center justify-center overflow-hidden">
-                {employee.profile_photo_url ? (
-                  <img src={employee.profile_photo_url} alt="Employee" className="w-full h-full object-cover" />
-                ) : (
-                  <img src="https://cdn-icons-png.flaticon.com/512/847/847969.png" alt="Default" className="w-full h-full object-contain p-4" />
-                )}
-              </div>
-              <button 
-                onClick={() => photoInputRef.current?.click()} 
-                className="mt-2.5 text-[#0066cc] dark:text-blue-400 font-bold cursor-pointer text-sm hover:underline flex items-center gap-1"
-              >
-                <Upload className="w-4 h-4" /> {uploading ? 'Uploading...' : 'Add Picture'}
-              </button>
-              <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
-            </div>
-          </div>
-        )}
-
-        {/* Other Tabs - Placeholder */}
-        {activeTab !== 'general' && (
-          <div className="border border-[#2f77bb] bg-[#d7e5f2] dark:bg-slate-800 p-10 text-center min-h-[400px] flex items-center justify-center">
+          {/* PAYROLL HISTORY TAB */}
+          {activeTab === 'payroll' && (
             <div>
-              <Clock className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-              <p className="text-slate-500 text-lg font-semibold">{tabs.find(t => t.id === activeTab)?.label}</p>
-              <p className="text-slate-400 text-sm mt-2">This section will display {tabs.find(t => t.id === activeTab)?.label.toLowerCase()} data.</p>
-              <p className="text-slate-400 text-xs mt-1">Linked to the relevant module in the ERP system.</p>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-slate-700 dark:text-slate-300">💰 Payroll History</h3>
+                <span className="text-xs text-slate-500">{payrollHistory.length} payslips</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-[#2e75b6] text-white">
+                      <th className="p-2 text-left border border-[#1a5fa0]">Period</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Basic Salary</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Overtime</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Deductions</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Tax</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Net Pay</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payrollHistory.map(payslip => (
+                      <tr key={payslip.id} className="bg-white dark:bg-slate-700 even:bg-slate-50 dark:even:bg-slate-600">
+                        <td className="p-2 border border-[#b8ccdc]">{payslip.payroll_periods?.period_name || payslip.payslip_number}</td>
+                        <td className="p-2 border border-[#b8ccdc]">{formatCurrency(payslip.basic_salary)}</td>
+                        <td className="p-2 border border-[#b8ccdc]">{formatCurrency(payslip.overtime_amount)}</td>
+                        <td className="p-2 border border-[#b8ccdc] text-red-600">{formatCurrency(payslip.total_deductions)}</td>
+                        <td className="p-2 border border-[#b8ccdc]">{formatCurrency(payslip.paye_tax)}</td>
+                        <td className="p-2 border border-[#b8ccdc] font-bold text-emerald-600">{formatCurrency(payslip.net_salary)}</td>
+                        <td className="p-2 border border-[#b8ccdc]">
+                          <span className={`px-2 py-0.5 rounded-full text-xs ${payslip.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{payslip.status}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {payrollHistory.length === 0 && <p className="text-center text-slate-400 py-8">No payroll records found</p>}
+              </div>
             </div>
+          )}
+
+          {/* PAYROLL DETAILS TAB */}
+          {activeTab === 'details' && (
+            <div>
+              <h3 className="font-bold text-slate-700 dark:text-slate-300 mb-3">💳 Payroll Details</h3>
+              {payrollDetails ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { label: 'Salary Type', value: payrollDetails.payment_method || 'N/A' },
+                    { label: 'Basic Salary', value: formatCurrency(payrollDetails.basic_salary) },
+                    { label: 'Housing Allowance', value: formatCurrency(payrollDetails.housing_allowance) },
+                    { label: 'Transport', value: formatCurrency(payrollDetails.transport_allowance) },
+                    { label: 'Medical', value: formatCurrency(payrollDetails.medical_allowance) },
+                    { label: 'Total Earnings', value: formatCurrency(payrollDetails.total_earnings) },
+                    { label: 'Pension', value: formatCurrency(payrollDetails.pension_contribution) },
+                    { label: 'Medical Aid', value: formatCurrency(payrollDetails.medical_aid) },
+                    { label: 'Tax Number', value: payrollDetails.tax_reference_number || employee.tax_number || 'N/A' },
+                    { label: 'Bank', value: payrollDetails.bank_name || employee.bank_name || 'N/A' },
+                    { label: 'Account', value: payrollDetails.bank_account_number || employee.bank_account_number || 'N/A' },
+                    { label: 'Effective Date', value: formatDate(payrollDetails.effective_date) },
+                  ].map((item, i) => (
+                    <div key={i} className="bg-white dark:bg-slate-700 border border-[#b8ccdc] rounded p-3">
+                      <p className="text-xs text-slate-500">{item.label}</p>
+                      <p className="font-semibold text-slate-800 dark:text-white">{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <CreditCard className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+                  <p className="text-slate-500">No payroll details configured</p>
+                  <button onClick={() => navigate(`/payroll`)} className="mt-2 text-[#2c5f9b] underline text-sm">Configure in Payroll Module</button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* SCHEDULING TAB */}
+          {activeTab === 'schedule' && (
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-slate-700 dark:text-slate-300">📅 Upcoming Schedule</h3>
+                <span className="text-xs text-slate-500">{schedules.length} shifts</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-[#2e75b6] text-white">
+                      <th className="p-2 text-left border border-[#1a5fa0]">Date</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Shift</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Time</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Job/Client</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Location</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {schedules.map(shift => (
+                      <tr key={shift.id} className="bg-white dark:bg-slate-700 even:bg-slate-50 dark:even:bg-slate-600">
+                        <td className="p-2 border border-[#b8ccdc]">{formatDate(shift.shift_date)}</td>
+                        <td className="p-2 border border-[#b8ccdc]">{shift.shift_types?.name || 'Standard'}</td>
+                        <td className="p-2 border border-[#b8ccdc]">{shift.shift_types?.start_time?.slice(0,5)} - {shift.shift_types?.end_time?.slice(0,5)}</td>
+                        <td className="p-2 border border-[#b8ccdc]">{shift.jobs?.title || shift.jobs?.clients?.company_name || 'N/A'}</td>
+                        <td className="p-2 border border-[#b8ccdc] text-xs">{shift.jobs?.site_address?.slice(0, 30) || 'N/A'}</td>
+                        <td className="p-2 border border-[#b8ccdc]">
+                          <span className={`px-2 py-0.5 rounded-full text-xs ${shift.status === 'checked_in' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>{shift.status}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {schedules.length === 0 && <p className="text-center text-slate-400 py-8">No upcoming schedules</p>}
+              </div>
+            </div>
+          )}
+
+          {/* LEAVE TAB */}
+          {activeTab === 'leave' && (
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-slate-700 dark:text-slate-300">🏖️ Leave Records</h3>
+                <span className="text-xs text-slate-500">Balance: {stats.leaveBalance} days</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-[#2e75b6] text-white">
+                      <th className="p-2 text-left border border-[#1a5fa0]">Type</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Start</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">End</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Days</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Status</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaveRecords.map(leave => (
+                      <tr key={leave.id} className="bg-white dark:bg-slate-700 even:bg-slate-50 dark:even:bg-slate-600">
+                        <td className="p-2 border border-[#b8ccdc]">{leave.leave_types?.name || 'N/A'}</td>
+                        <td className="p-2 border border-[#b8ccdc]">{formatDate(leave.start_date)}</td>
+                        <td className="p-2 border border-[#b8ccdc]">{formatDate(leave.end_date)}</td>
+                        <td className="p-2 border border-[#b8ccdc] font-bold">{leave.total_days}</td>
+                        <td className="p-2 border border-[#b8ccdc]">
+                          <span className={`px-2 py-0.5 rounded-full text-xs ${leave.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : leave.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{leave.status}</span>
+                        </td>
+                        <td className="p-2 border border-[#b8ccdc] text-xs">{leave.reason?.slice(0, 40) || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {leaveRecords.length === 0 && <p className="text-center text-slate-400 py-8">No leave records</p>}
+              </div>
+            </div>
+          )}
+
+          {/* EVENTS TAB */}
+          {activeTab === 'events' && (
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-slate-700 dark:text-slate-300">📢 Upcoming Events / Jobs</h3>
+                <span className="text-xs text-slate-500">{events.length} events</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-[#2e75b6] text-white">
+                      <th className="p-2 text-left border border-[#1a5fa0]">Event</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Date</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Time</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Location</th>
+                      <th className="p-2 text-left border border-[#1a5fa0]">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {events.map(event => (
+                      <tr key={event.id} className="bg-white dark:bg-slate-700 even:bg-slate-50 dark:even:bg-slate-600">
+                        <td className="p-2 border border-[#b8ccdc] font-medium">{event.title}</td>
+                        <td className="p-2 border border-[#b8ccdc]">{formatDate(event.scheduled_date)}</td>
+                        <td className="p-2 border border-[#b8ccdc]">{event.scheduled_start_time?.slice(0,5)} - {event.scheduled_end_time?.slice(0,5)}</td>
+                        <td className="p-2 border border-[#b8ccdc] text-xs">{event.site_address?.slice(0, 30) || 'N/A'}</td>
+                        <td className="p-2 border border-[#b8ccdc]">
+                          <span className={`px-2 py-0.5 rounded-full text-xs ${event.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>{event.status}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {events.length === 0 && <p className="text-center text-slate-400 py-8">No upcoming events</p>}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Attachments Section */}
+        <div className="mt-4 border border-[#2f77bb]">
+          <div className="flex gap-1.5 p-1.5 bg-[#c9dff2] dark:bg-slate-700 border-b border-[#2f77bb] flex-wrap">
+            <button onClick={() => fileInputRef.current?.click()} className="neo-btn h-8 px-3 rounded-md bg-gradient-to-b from-[#4f8fd0] to-[#2d5f98] text-white font-bold text-xs">📎 Add Att.</button>
+            <button className="neo-btn h-8 px-3 rounded-md bg-gradient-to-b from-[#4f8fd0] to-[#2d5f98] text-white font-bold text-xs">👁 Show All</button>
+            <button className="neo-btn h-8 px-3 rounded-md bg-gradient-to-b from-red-500 to-red-700 text-white font-bold text-xs">❌ Delete Att.</button>
+            <input ref={fileInputRef} type="file" className="hidden" onChange={handleAttachmentUpload} />
           </div>
-        )}
+          <table className="w-full border-collapse bg-white dark:bg-slate-800">
+            <thead>
+              <tr>
+                <th className="bg-[#d4e6f7] dark:bg-slate-600 border border-[#2f77bb] p-2 text-sm">File Name</th>
+                <th className="bg-[#d4e6f7] dark:bg-slate-600 border border-[#2f77bb] p-2 text-sm">Type</th>
+                <th className="bg-[#d4e6f7] dark:bg-slate-600 border border-[#2f77bb] p-2 text-sm">Added On</th>
+                <th className="bg-[#d4e6f7] dark:bg-slate-600 border border-[#2f77bb] p-2 text-sm">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {attachments.length > 0 ? attachments.map(doc => (
+                <tr key={doc.id}>
+                  <td className="border border-[#b8ccdc] p-2 text-sm">{doc.document_name}</td>
+                  <td className="border border-[#b8ccdc] p-2 text-sm capitalize">{doc.document_type}</td>
+                  <td className="border border-[#b8ccdc] p-2 text-sm">{formatDate(doc.uploaded_at)}</td>
+                  <td className="border border-[#b8ccdc] p-2 text-sm">
+                    <div className="flex gap-1">
+                      <a href={doc.document_url} target="_blank" className="p-1 rounded hover:bg-blue-100"><Eye className="w-4 h-4 text-blue-600" /></a>
+                      <a href={doc.document_url} download className="p-1 rounded hover:bg-emerald-100"><Download className="w-4 h-4 text-emerald-600" /></a>
+                    </div>
+                  </td>
+                </tr>
+              )) : (
+                <tr><td colSpan={4} className="border border-[#b8ccdc] p-4 text-center text-slate-400 italic bg-[#f7fbff]">No attachments available</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </main>
     </div>
   )
