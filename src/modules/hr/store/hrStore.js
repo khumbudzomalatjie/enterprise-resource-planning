@@ -40,7 +40,40 @@ const useHRStore = create((set, get) => ({
   createEmployee: async (employeeData) => {
     try {
       set({ loading: true, error: null })
-      const { data, error } = await hrApi.createEmployee(employeeData)
+      
+      // Only include fields that actually exist in the employees table
+      const safeData = {
+        first_name: employeeData.first_name,
+        last_name: employeeData.last_name,
+        email: employeeData.email,
+        phone: employeeData.phone || null,
+        alternative_phone: employeeData.alternative_phone || null,
+        address_line1: employeeData.address_line1 || null,
+        address_line2: employeeData.address_line2 || null,
+        city: employeeData.city || null,
+        state: employeeData.state || null,
+        postal_code: employeeData.postal_code || null,
+        department: employeeData.department || null,
+        position: employeeData.position || null,
+        employment_type: employeeData.employment_type || 'full_time',
+        employment_status: employeeData.employment_status || 'active',
+        date_of_hire: employeeData.date_of_hire || null,
+        date_of_birth: employeeData.date_of_birth || null,
+        gender: employeeData.gender || null,
+        marital_status: employeeData.marital_status || null,
+        id_number: employeeData.id_number || null,
+        tax_number: employeeData.tax_number || null,
+        bank_name: employeeData.bank_name || null,
+        bank_account_number: employeeData.bank_account_number || null,
+        bank_branch_code: employeeData.bank_branch_code || null,
+        emergency_contact_name: employeeData.emergency_contact_name || null,
+        emergency_contact_phone: employeeData.emergency_contact_phone || null,
+        emergency_contact_relation: employeeData.emergency_contact_relation || null,
+        notes: employeeData.notes || null,
+        profile_photo_url: employeeData.profile_photo_url || null
+      }
+
+      const { data, error } = await hrApi.createEmployee(safeData)
       if (error) {
         console.error('Create employee error:', error)
         set({ error: error.message, loading: false })
@@ -57,17 +90,49 @@ const useHRStore = create((set, get) => ({
 
   updateEmployee: async (id, updates) => {
     try {
-      const { data, error } = await hrApi.updateEmployee(id, updates)
+      set({ loading: true, error: null })
+      
+      // Only include safe fields that exist in the employees table
+      const safeUpdates = {}
+      const allowedFields = [
+        'first_name', 'last_name', 'email', 'phone', 'alternative_phone',
+        'address_line1', 'address_line2', 'city', 'state', 'postal_code',
+        'department', 'position', 'employment_type', 'employment_status',
+        'date_of_hire', 'date_of_birth', 'gender', 'marital_status',
+        'id_number', 'tax_number', 'bank_name', 'bank_account_number',
+        'bank_branch_code', 'emergency_contact_name', 'emergency_contact_phone',
+        'emergency_contact_relation', 'notes', 'profile_photo_url',
+        'date_of_termination', 'termination_reason'
+      ]
+
+      // Only copy allowed fields that have values
+      allowedFields.forEach(field => {
+        if (updates[field] !== undefined) {
+          safeUpdates[field] = updates[field] || null
+        }
+      })
+
+      // Always update the timestamp
+      safeUpdates.updated_at = new Date().toISOString()
+
+      console.log('Updating employee with:', safeUpdates)
+
+      const { data, error } = await hrApi.updateEmployee(id, safeUpdates)
       if (error) {
         console.error('Update employee error:', error)
+        set({ error: error.message, loading: false })
         return { success: false, error: error.message }
       }
+      
       set(state => ({
         employees: (state.employees || []).map(emp => emp.id === id ? data : emp),
-        selectedEmployee: state.selectedEmployee?.id === id ? data : state.selectedEmployee
+        selectedEmployee: state.selectedEmployee?.id === id ? data : state.selectedEmployee,
+        loading: false
       }))
       return { success: true, data }
     } catch (err) {
+      console.error('Update employee exception:', err)
+      set({ error: err.message, loading: false })
       return { success: false, error: err.message }
     }
   },
