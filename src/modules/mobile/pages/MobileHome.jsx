@@ -9,7 +9,8 @@ import { supabase } from '../../../lib/supabaseClient'
 import { 
   Briefcase, Clock, CheckCircle2, MapPin, 
   Camera, AlertCircle, Package, LogOut,
-  Play, Pause, RefreshCw, ChevronDown
+  Play, Pause, RefreshCw, ChevronDown,
+  Calendar, Eye
 } from 'lucide-react'
 
 export default function MobileHome() {
@@ -27,8 +28,20 @@ export default function MobileHome() {
   const touchStartY = useRef(0)
   const pullThreshold = 80
 
+  // Tomorrow's Jobs State
+  const [upcomingJobs, setUpcomingJobs] = useState([])
+  const [showUpcoming, setShowUpcoming] = useState(false)
+  const [loadingUpcoming, setLoadingUpcoming] = useState(false)
+  const [selectedDate, setSelectedDate] = useState(() => {
+    // Default to tomorrow
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    return tomorrow.toISOString().split('T')[0]
+  })
+
   useEffect(() => {
     loadData()
+    loadUpcomingJobs()
     const timer = setInterval(() => setCurrentTime(new Date()), 60000)
     return () => clearInterval(timer)
   }, [])
@@ -48,9 +61,62 @@ export default function MobileHome() {
     }
   }
 
+  // Load upcoming jobs for selected date
+  const loadUpcomingJobs = async (date = null) => {
+    const targetDate = date || selectedDate
+    setLoadingUpcoming(true)
+    
+    try {
+      // Get employee ID from profile
+      const { data: employee } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('user_id', user?.id)
+        .single()
+
+      if (!employee) { setLoadingUpcoming(false); return }
+
+      // Get job assignments for the target date
+      const { data: assignments } = await supabase
+        .from('job_assignments')
+        .select('job_id')
+        .eq('employee_id', employee.id)
+        .eq('status', 'assigned')
+
+      const jobIds = assignments?.map(a => a.job_id) || []
+
+      if (jobIds.length === 0) {
+        setUpcomingJobs([])
+        setLoadingUpcoming(false)
+        return
+      }
+
+      // Get jobs scheduled for the target date (excluding completed, cancelled, on_hold)
+      const { data: jobs } = await supabase
+        .from('jobs')
+        .select('*, clients(company_name, phone), job_categories(name, color)')
+        .in('id', jobIds)
+        .eq('scheduled_date', targetDate)
+        .not('status', 'in', '(completed,cancelled,on_hold)')
+        .order('scheduled_start_time', { ascending: true })
+
+      setUpcomingJobs(jobs || [])
+    } catch (error) {
+      console.error('Error loading upcoming jobs:', error)
+    } finally {
+      setLoadingUpcoming(false)
+    }
+  }
+
+  const handleDateChange = (date) => {
+    setSelectedDate(date)
+    loadUpcomingJobs(date)
+  }
+
   const handleRefresh = async () => {
     setRefreshing(true)
     await loadData()
+    await loadUpcomingJobs()
     setTimeout(() => setRefreshing(false), 500)
     toast.success('Refreshed!', { duration: 1500 })
   }
@@ -83,6 +149,10 @@ export default function MobileHome() {
     document.getElementById('jobs-section')?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  const scrollToUpcoming = () => {
+    document.getElementById('upcoming-section')?.scrollIntoView({ behavior: 'smooth' })
+  }
+
   const handleSignOut = async () => {
     await signOut()
     navigate('/login')
@@ -109,11 +179,9 @@ export default function MobileHome() {
     finally { setUpdatingJob(null) }
   }
 
-  // Cleaners can PAUSE but NOT put on "hold" - that's for managers only
   const handlePauseJob = async (jobId) => {
     setUpdatingJob(jobId)
     try {
-      // Cleaners can only pause (on_hold for them is temporary)
       await supabase.from('jobs').update({ status: 'on_hold' }).eq('id', jobId)
       toast.success('Job paused')
       loadData()
@@ -123,11 +191,23 @@ export default function MobileHome() {
 
   const formatTime = (date) => date.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })
   const formatDate = (date) => date.toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long' })
+  const formatDateShort = (date) => date.toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' })
 
   // Filter out completed AND held jobs from mobile view
   const activeJobs = (myJobs || []).filter(job => 
     job.status !== 'completed' && job.status !== 'on_hold'
   )
+
+  // Generate next 7 days for date selector
+  const nextDays = []
+  for (let i = 0; i < 7; i++) {
+    const date = new Date()
+    date.setDate(date.getDate() + i)
+    nextDays.push({
+      value: date.toISOString().split('T')[0],
+      label: i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : formatDateShort(date)
+    })
+  }
 
   return (
     <div 
@@ -175,26 +255,30 @@ export default function MobileHome() {
           </div>
           <p className="text-5xl font-bold text-center my-3 font-mono tracking-wider">{formatTime(currentTime)}</p>
           
-          <div className="flex justify-center gap-3 mt-1">
+          <div className="flex justify-center gap-3 mt-1 flex-wrap">
             <button onClick={scrollToJobs} className="text-xs text-white/70 hover:text-white flex items-center gap-1 bg-white/10 px-3 py-1 rounded-full">
-              <ChevronDown className="w-3 h-3" /> View Jobs
+              <ChevronDown className="w-3 h-3" /> Today's Jobs
+            </button>
+            <button onClick={scrollToUpcoming} className="text-xs text-white/70 hover:text-white flex items-center gap-1 bg-white/10 px-3 py-1 rounded-full">
+              <Calendar className="w-3 h-3" /> Upcoming Jobs
             </button>
           </div>
         </div>
 
         {/* Stats Cards */}
         <div className="px-5 -mt-3">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             {[
-              { icon: Briefcase, label: 'Active', value: activeJobs.length, color: 'from-blue-400 to-blue-500' },
+              { icon: Briefcase, label: 'Today', value: activeJobs.length, color: 'from-blue-400 to-blue-500' },
               { icon: CheckCircle2, label: 'Done', value: stats.completedJobs || 0, color: 'from-green-400 to-green-500' },
               { icon: Clock, label: 'Clock', value: stats.isClockedIn ? 'In' : 'Out', color: stats.isClockedIn ? 'from-amber-400 to-amber-500' : 'from-slate-400 to-slate-500' },
+              { icon: Calendar, label: 'Upcoming', value: upcomingJobs.length, color: 'from-purple-400 to-violet-500' },
             ].map((s, i) => (
               <motion.div key={s.label} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
-                className={`bg-gradient-to-br ${s.color} rounded-2xl p-3 text-white text-center shadow-lg`}>
-                <s.icon className="w-5 h-5 mx-auto mb-1 opacity-80" />
-                <p className="text-xl font-bold">{s.value}</p>
-                <p className="text-[10px] opacity-80 font-medium">{s.label}</p>
+                className={`bg-gradient-to-br ${s.color} rounded-2xl p-2.5 text-white text-center shadow-lg`}>
+                <s.icon className="w-4 h-4 mx-auto mb-1 opacity-80" />
+                <p className="text-lg font-bold">{s.value}</p>
+                <p className="text-[9px] opacity-80 font-medium">{s.label}</p>
               </motion.div>
             ))}
           </div>
@@ -219,11 +303,11 @@ export default function MobileHome() {
           </div>
         </div>
 
-        {/* Active Jobs Section */}
+        {/* Today's Active Jobs Section */}
         <div id="jobs-section" className="px-5 mt-5 mb-4">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <Briefcase className="w-4 h-4" />My Active Jobs
+              <Briefcase className="w-4 h-4" />Today's Jobs
             </h2>
             <span className="text-xs text-white/70 bg-white/20 px-2 py-0.5 rounded-full">{activeJobs.length} active</span>
           </div>
@@ -245,7 +329,6 @@ export default function MobileHome() {
                     </div>
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ml-2 ${
                       job.status === 'in_progress' ? 'bg-amber-100 text-amber-700' :
-                      job.status === 'on_hold' ? 'bg-purple-100 text-purple-700' :
                       'bg-blue-100 text-blue-700'
                     }`}>{(job.status || 'pending').replace('_', ' ')}</span>
                   </div>
@@ -292,6 +375,112 @@ export default function MobileHome() {
               <p className="text-white/60 text-xs mt-1">Pull down to refresh</p>
             </div>
           )}
+        </div>
+
+        {/* UPCOMING JOBS SECTION - VIEW ONLY */}
+        <div id="upcoming-section" className="px-5 mt-2 mb-4">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <Calendar className="w-4 h-4" />Upcoming Jobs
+            </h2>
+            <button 
+              onClick={() => setShowUpcoming(!showUpcoming)}
+              className="text-xs text-white/70 hover:text-white bg-white/10 px-3 py-1 rounded-full flex items-center gap-1"
+            >
+              {showUpcoming ? 'Hide' : 'Show'} <ChevronDown className={`w-3 h-3 transition-transform ${showUpcoming ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
+
+          {/* Date Selector */}
+          {showUpcoming && (
+            <div className="mb-3 overflow-x-auto">
+              <div className="flex gap-2 pb-2">
+                {nextDays.map(day => (
+                  <button
+                    key={day.value}
+                    onClick={() => handleDateChange(day.value)}
+                    className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-medium transition-all ${
+                      selectedDate === day.value
+                        ? 'bg-white text-emerald-700 shadow-lg'
+                        : 'bg-white/20 text-white hover:bg-white/30'
+                    }`}
+                  >
+                    {day.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <AnimatePresence>
+            {showUpcoming && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                {loadingUpcoming ? (
+                  <div className="text-center py-6">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mx-auto"></div>
+                    <p className="text-white/60 text-xs mt-2">Loading...</p>
+                  </div>
+                ) : upcomingJobs.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-white/70 text-xs font-medium">
+                      {selectedDate === new Date().toISOString().split('T')[0] 
+                        ? "Today's Schedule" 
+                        : selectedDate === nextDays[1]?.value 
+                          ? "Tomorrow's Schedule" 
+                          : `Schedule for ${formatDateShort(new Date(selectedDate + 'T00:00:00'))}`}
+                    </p>
+                    {upcomingJobs.map((job, i) => (
+                      <motion.div 
+                        key={job.id} 
+                        initial={{ opacity: 0, x: -10 }} 
+                        animate={{ opacity: 1, x: 0 }} 
+                        transition={{ delay: i * 0.05 }}
+                        className="bg-white/15 backdrop-blur rounded-xl p-3 border border-white/10"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-white text-sm">{job.title}</h3>
+                            <p className="text-white/60 text-xs">{job.job_number} · {job.clients?.company_name || 'Client'}</p>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/20 text-white">
+                            <Eye className="w-3 h-3 inline mr-0.5" /> View Only
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-xs text-white/70 mb-2">
+                          <MapPin className="w-3 h-3" />{job.site_address?.slice(0, 30)}
+                          <span className="mx-1">·</span>
+                          <Clock className="w-3 h-3" />{job.scheduled_start_time?.slice(0,5)}-{job.scheduled_end_time?.slice(0,5)}
+                        </div>
+
+                        {job.clients?.phone && (
+                          <a href={`tel:${job.clients.phone}`} 
+                            className="text-xs text-white/80 flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1 w-fit hover:bg-white/20 transition-colors">
+                            📞 Call Client
+                          </a>
+                        )}
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 bg-white/10 rounded-2xl">
+                    <Calendar className="w-10 h-10 text-white/50 mx-auto mb-2" />
+                    <p className="text-white/70 text-sm font-medium">No jobs scheduled</p>
+                    <p className="text-white/40 text-xs mt-1">
+                      {selectedDate === new Date().toISOString().split('T')[0] 
+                        ? 'No jobs for today' 
+                        : `No jobs for ${formatDateShort(new Date(selectedDate + 'T00:00:00'))}`}
+                    </p>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <div className="h-4" />
