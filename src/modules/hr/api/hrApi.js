@@ -23,27 +23,116 @@ export const hrApi = {
   },
 
   async getEmployee(id) {
-    const { data, error } = await supabase
+    // Fetch employee without joins to avoid missing table errors
+    const { data: employee, error } = await supabase
       .from('employees')
-      .select('*, contracts(*), leave_requests(*), training_records(*), disciplinary_records(*)')
+      .select('*')
       .eq('id', id)
       .single()
-    return { data, error }
+    
+    if (error) return { data: null, error }
+    if (!employee) return { data: null, error: { message: 'Employee not found' } }
+
+    // Try to fetch related data separately (won't break if tables don't exist)
+    let contracts = [], leaveRequests = [], trainingRecords = [], disciplinaryRecords = []
+
+    try {
+      const { data: c } = await supabase.from('contracts').select('*').eq('employee_id', id).order('created_at', { ascending: false })
+      contracts = c || []
+    } catch (e) {}
+
+    try {
+      const { data: l } = await supabase.from('leave_requests').select('*, leave_types(name)').eq('employee_id', id).order('created_at', { ascending: false })
+      leaveRequests = l || []
+    } catch (e) {}
+
+    try {
+      const { data: t } = await supabase.from('training_records').select('*').eq('employee_id', id).order('created_at', { ascending: false })
+      trainingRecords = t || []
+    } catch (e) {}
+
+    try {
+      const { data: d } = await supabase.from('disciplinary_records').select('*').eq('employee_id', id).order('created_at', { ascending: false })
+      disciplinaryRecords = d || []
+    } catch (e) {}
+
+    return {
+      data: {
+        ...employee,
+        contracts,
+        leave_requests: leaveRequests,
+        training_records: trainingRecords,
+        disciplinary_records: disciplinaryRecords
+      },
+      error: null
+    }
   },
 
   async createEmployee(employeeData) {
+    // Only include fields that exist in the employees table
+    const safeData = {
+      first_name: employeeData.first_name,
+      last_name: employeeData.last_name,
+      email: employeeData.email,
+      phone: employeeData.phone || null,
+      alternative_phone: employeeData.alternative_phone || null,
+      address_line1: employeeData.address_line1 || null,
+      address_line2: employeeData.address_line2 || null,
+      city: employeeData.city || null,
+      state: employeeData.state || null,
+      postal_code: employeeData.postal_code || null,
+      department: employeeData.department || null,
+      position: employeeData.position || null,
+      employment_type: employeeData.employment_type || 'full_time',
+      employment_status: employeeData.employment_status || 'active',
+      date_of_hire: employeeData.date_of_hire || null,
+      date_of_birth: employeeData.date_of_birth || null,
+      gender: employeeData.gender || null,
+      marital_status: employeeData.marital_status || null,
+      id_number: employeeData.id_number || null,
+      tax_number: employeeData.tax_number || null,
+      bank_name: employeeData.bank_name || null,
+      bank_account_number: employeeData.bank_account_number || null,
+      bank_branch_code: employeeData.bank_branch_code || null,
+      emergency_contact_name: employeeData.emergency_contact_name || null,
+      emergency_contact_phone: employeeData.emergency_contact_phone || null,
+      emergency_contact_relation: employeeData.emergency_contact_relation || null,
+      notes: employeeData.notes || null,
+      profile_photo_url: employeeData.profile_photo_url || null
+    }
+
     const { data, error } = await supabase
       .from('employees')
-      .insert([employeeData])
+      .insert([safeData])
       .select()
       .single()
     return { data, error }
   },
 
   async updateEmployee(id, updates) {
+    // Only include allowed fields that exist in the employees table
+    const allowedFields = [
+      'first_name', 'last_name', 'email', 'phone', 'alternative_phone',
+      'address_line1', 'address_line2', 'city', 'state', 'postal_code',
+      'department', 'position', 'employment_type', 'employment_status',
+      'date_of_hire', 'date_of_birth', 'gender', 'marital_status',
+      'id_number', 'tax_number', 'bank_name', 'bank_account_number',
+      'bank_branch_code', 'emergency_contact_name', 'emergency_contact_phone',
+      'emergency_contact_relation', 'notes', 'profile_photo_url',
+      'date_of_termination', 'termination_reason'
+    ]
+
+    const safeUpdates = { updated_at: new Date().toISOString() }
+    
+    allowedFields.forEach(field => {
+      if (updates[field] !== undefined) {
+        safeUpdates[field] = updates[field] || null
+      }
+    })
+
     const { data, error } = await supabase
       .from('employees')
-      .update(updates)
+      .update(safeUpdates)
       .eq('id', id)
       .select()
       .single()
@@ -53,7 +142,11 @@ export const hrApi = {
   async deleteEmployee(id) {
     const { error } = await supabase
       .from('employees')
-      .update({ employment_status: 'terminated', date_of_termination: new Date().toISOString().split('T')[0] })
+      .update({ 
+        employment_status: 'terminated', 
+        date_of_termination: new Date().toISOString().split('T')[0],
+        updated_at: new Date().toISOString()
+      })
       .eq('id', id)
     return { error }
   },
@@ -249,43 +342,24 @@ export const hrApi = {
 
   async uploadEmployeePhoto(employeeId, file) {
     try {
-      if (!employeeId) {
-        console.error('No employee ID provided')
-        return { error: { message: 'Employee ID is required' } }
-      }
-      
-      if (!file) {
-        console.error('No file provided')
-        return { error: { message: 'No file provided' } }
+      if (!employeeId || !file) {
+        return { error: { message: 'Employee ID and file are required' } }
       }
 
-      // Validate file type
       const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/jpg']
       if (!allowedTypes.includes(file.type)) {
-        console.error('Invalid file type:', file.type)
-        return { error: { message: `Invalid file type: ${file.type}. Only JPG, PNG, GIF, WebP allowed.` } }
+        return { error: { message: `Invalid file type. Only JPG, PNG, GIF, WebP allowed.` } }
       }
 
-      // Validate file size (max 5MB)
       const maxSize = 5 * 1024 * 1024
       if (file.size > maxSize) {
-        console.error('File too large:', file.size)
         return { error: { message: 'File too large. Maximum size is 5MB.' } }
       }
 
-      // Clean filename
       const fileExt = (file.name.split('.').pop() || 'jpg').toLowerCase()
       const cleanFileName = `photo_${Date.now()}.${fileExt}`
       const filePath = `${employeeId}/${cleanFileName}`
       
-      console.log('Uploading photo:', {
-        bucket: 'employee-photos',
-        path: filePath,
-        type: file.type,
-        size: `${(file.size / 1024).toFixed(1)} KB`
-      })
-      
-      // Upload to Supabase Storage
       const { data, error } = await supabase.storage
         .from('employee-photos')
         .upload(filePath, file, {
@@ -295,55 +369,31 @@ export const hrApi = {
         })
 
       if (error) {
-        console.error('Photo upload error:', error.message, error)
-        
         if (error.message.includes('bucket') || error.message.includes('not found')) {
-          return { error: { message: 'Storage bucket "employee-photos" not found. Please create it in Supabase Storage dashboard.' } }
+          return { error: { message: 'Storage bucket not found. Please create "employee-photos" bucket in Supabase.' } }
         }
-        if (error.message.includes('policy') || error.message.includes('permission')) {
-          return { error: { message: 'Permission denied. Check storage RLS policies for employee-photos bucket.' } }
-        }
-        if (error.message.includes('duplicate')) {
-          return { error: { message: 'A file with this name already exists.' } }
-        }
-        
         return { error: { message: `Upload failed: ${error.message}` } }
       }
 
-      console.log('Photo uploaded successfully:', data)
-      
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('employee-photos')
-        .getPublicUrl(filePath)
-      
+      const { data: urlData } = supabase.storage.from('employee-photos').getPublicUrl(filePath)
       const publicUrl = urlData?.publicUrl
-      console.log('Public URL:', publicUrl)
-      
+
       if (!publicUrl) {
-        return { error: { message: 'Failed to get public URL for uploaded photo' } }
+        return { error: { message: 'Failed to get public URL' } }
       }
       
-      // Update employee record with photo URL
       const { error: updateError } = await supabase
         .from('employees')
         .update({ profile_photo_url: publicUrl })
         .eq('id', employeeId)
 
       if (updateError) {
-        console.error('Failed to update employee record:', updateError)
-        return { 
-          data: { path: filePath, url: publicUrl }, 
-          error: null,
-          warning: 'Photo uploaded but profile record update failed' 
-        }
+        return { data: { url: publicUrl }, error: null, warning: 'Photo uploaded but profile update failed' }
       }
 
       return { data: { path: filePath, url: publicUrl }, error: null }
-      
     } catch (err) {
-      console.error('Unexpected error in uploadEmployeePhoto:', err)
-      return { error: { message: err.message || 'Unknown error during photo upload' } }
+      return { error: { message: err.message || 'Unknown error' } }
     }
   },
 
@@ -353,37 +403,19 @@ export const hrApi = {
 
   async uploadEmployeeDocument(employeeId, file) {
     try {
-      if (!employeeId) {
-        console.error('No employee ID provided')
-        return { error: { message: 'Employee ID is required' } }
-      }
-      
-      if (!file) {
-        console.error('No file provided')
-        return { error: { message: 'No file provided' } }
+      if (!employeeId || !file) {
+        return { error: { message: 'Employee ID and file are required' } }
       }
 
-      // Validate file size (max 10MB)
       const maxSize = 10 * 1024 * 1024
       if (file.size > maxSize) {
-        console.error('File too large:', file.size)
-        return { error: { message: `File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 10MB.` } }
+        return { error: { message: 'File too large. Maximum size is 10MB.' } }
       }
 
-      // Clean filename - remove special characters
       const timestamp = Date.now()
       const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
       const filePath = `${employeeId}/${timestamp}_${safeFileName}`
       
-      console.log('Uploading document:', {
-        bucket: 'employee-documents',
-        path: filePath,
-        type: file.type,
-        size: `${(file.size / 1024).toFixed(1)} KB`,
-        originalName: file.name
-      })
-      
-      // Upload to Supabase Storage
       const { data, error } = await supabase.storage
         .from('employee-documents')
         .upload(filePath, file, {
@@ -393,38 +425,21 @@ export const hrApi = {
         })
 
       if (error) {
-        console.error('Document upload error:', error.message, error)
-        
         if (error.message.includes('bucket') || error.message.includes('not found')) {
-          return { error: { message: 'Storage bucket "employee-documents" not found. Please create it in Supabase Storage dashboard.' } }
+          return { error: { message: 'Storage bucket not found. Please create "employee-documents" bucket in Supabase.' } }
         }
-        if (error.message.includes('policy') || error.message.includes('permission')) {
-          return { error: { message: 'Permission denied. Check storage RLS policies for employee-documents bucket.' } }
-        }
-        if (error.message.includes('duplicate')) {
-          return { error: { message: 'A file with this name already exists.' } }
-        }
-        
         return { error: { message: `Upload failed: ${error.message}` } }
       }
 
-      console.log('Document uploaded successfully:', data)
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('employee-documents')
-        .getPublicUrl(filePath)
-      
+      const { data: urlData } = supabase.storage.from('employee-documents').getPublicUrl(filePath)
       const publicUrl = urlData?.publicUrl
-      
+
       if (!publicUrl) {
-        return { error: { message: 'Failed to get public URL for uploaded document' } }
+        return { error: { message: 'Failed to get public URL' } }
       }
       
-      // Get current user for uploaded_by
       const { data: { user } } = await supabase.auth.getUser()
       
-      // Create document record in database
       const { data: docData, error: docError } = await supabase
         .from('employee_documents')
         .insert([{
@@ -438,24 +453,17 @@ export const hrApi = {
         .single()
 
       if (docError) {
-        console.error('Failed to create document record:', docError)
-        return { 
-          data: { url: publicUrl, document_name: file.name, path: filePath }, 
-          error: null,
-          warning: 'File uploaded but database record creation failed' 
-        }
+        return { data: { url: publicUrl, document_name: file.name }, error: null, warning: 'File uploaded but record creation failed' }
       }
 
       return { data: { ...docData, url: publicUrl }, error: null }
-      
     } catch (err) {
-      console.error('Unexpected error in uploadEmployeeDocument:', err)
-      return { error: { message: err.message || 'Unknown error during document upload' } }
+      return { error: { message: err.message || 'Unknown error' } }
     }
   },
 
   // ============================================
-  // STORAGE FUNCTIONS - GET / DELETE
+  // STORAGE FUNCTIONS - GET / DELETE DOCUMENTS
   // ============================================
 
   async getEmployeeDocuments(employeeId) {
@@ -464,66 +472,37 @@ export const hrApi = {
       .select('*')
       .eq('employee_id', employeeId)
       .order('uploaded_at', { ascending: false })
-
     return { data, error }
   },
 
   async deleteEmployeeDocument(documentId) {
     try {
-      // First get the document to find the storage path
       const { data: doc, error: fetchError } = await supabase
         .from('employee_documents')
         .select('*')
         .eq('id', documentId)
         .single()
 
-      if (fetchError) {
-        console.error('Document not found:', fetchError)
-        return { error: fetchError }
-      }
-      
-      if (!doc) {
-        return { error: { message: 'Document not found' } }
-      }
+      if (fetchError) return { error: fetchError }
+      if (!doc) return { error: { message: 'Document not found' } }
 
-      // Extract storage path from URL
       const url = doc.document_url
       if (url) {
         const urlParts = url.split('/')
         const bucketIndex = urlParts.indexOf('employee-documents')
-        
         if (bucketIndex !== -1) {
           const storagePath = urlParts.slice(bucketIndex + 1).join('/')
-          
-          console.log('Deleting from storage:', storagePath)
-          
-          // Delete from storage
-          const { error: storageError } = await supabase.storage
-            .from('employee-documents')
-            .remove([storagePath])
-            
-          if (storageError) {
-            console.error('Failed to delete from storage:', storageError)
-            // Continue to delete the database record even if storage delete fails
-          }
+          await supabase.storage.from('employee-documents').remove([storagePath])
         }
       }
 
-      // Delete record from database
       const { error } = await supabase
         .from('employee_documents')
         .delete()
         .eq('id', documentId)
 
-      if (error) {
-        console.error('Failed to delete document record:', error)
-        return { error }
-      }
-
-      return { error: null }
-      
+      return { error }
     } catch (err) {
-      console.error('Error deleting document:', err)
       return { error: { message: err.message } }
     }
   },
@@ -534,9 +513,7 @@ export const hrApi = {
       .select('*')
       .eq('id', documentId)
       .single()
-
-    if (error) return { error }
-    return { data: doc, error: null }
+    return { data: doc, error }
   },
 
   // ============================================
@@ -570,15 +547,7 @@ export const hrApi = {
         disciplinaryCases: disciplinaryCases || 0,
       }
     } catch (error) {
-      console.error('Error fetching HR stats:', error)
-      return {
-        totalEmployees: 0,
-        activeEmployees: 0,
-        pendingLeave: 0,
-        activeContracts: 0,
-        ongoingTraining: 0,
-        disciplinaryCases: 0,
-      }
+      return { totalEmployees: 0, activeEmployees: 0, pendingLeave: 0, activeContracts: 0, ongoingTraining: 0, disciplinaryCases: 0 }
     }
   },
 
@@ -592,7 +561,6 @@ export const hrApi = {
       .update({ employment_status: status })
       .in('id', employeeIds)
       .select()
-
     return { data, error }
   },
 
@@ -602,7 +570,6 @@ export const hrApi = {
       .select('department, count')
       .not('department', 'is', null)
       .order('department')
-
     return { data, error }
   },
 
@@ -612,7 +579,6 @@ export const hrApi = {
       .select('id, first_name, last_name, employee_code, email, position, department')
       .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,employee_code.ilike.%${query}%`)
       .limit(20)
-
     return { data, error }
   },
 }
