@@ -60,37 +60,62 @@ export default function MobileHome() {
   }
 
   // Load ALL scheduled/in-progress jobs - visible to ALL cleaners
-  // NO assignment needed. Only exclude held and completed.
   const loadAllJobs = async () => {
     setLoadingAllJobs(true)
     
     try {
+      console.log('🔍 MOBILE: Loading jobs...')
+      console.log('   Date filter:', selectedDate)
+      
+      // First, let's check what statuses exist in the database
+      const { data: statusCheck, error: statusError } = await supabase
+        .from('jobs')
+        .select('status')
+      
+      if (statusCheck) {
+        const statuses = [...new Set(statusCheck.map(j => j.status))]
+        console.log('   All statuses in DB:', statuses)
+      }
+
+      // Build the query
       let query = supabase
         .from('jobs')
         .select('*, clients(company_name, phone), job_categories(name, color)')
-        // Only exclude: completed, on_hold (held), cancelled
-        // INCLUDE: pending, scheduled, in_progress - ALL visible to cleaners
         .in('status', ['pending', 'scheduled', 'in_progress'])
         .order('scheduled_date', { ascending: true })
         .order('scheduled_start_time', { ascending: true })
 
-      // Apply date filter if selected
       if (selectedDate !== 'all') {
         query = query.eq('scheduled_date', selectedDate)
       }
 
       const { data: jobs, error } = await query
       
+      console.log('📊 MOBILE: Jobs result:', jobs?.length || 0, 'jobs found')
+      
       if (error) {
-        console.error('Error loading jobs:', error)
-        toast.error('Failed to load jobs')
+        console.error('❌ MOBILE: Error loading jobs:', error.message)
+        console.error('   Full error:', error)
+        toast.error('Failed to load jobs: ' + error.message)
+      } else if (jobs && jobs.length > 0) {
+        console.log('📋 MOBILE: First job:', {
+          title: jobs[0].title,
+          status: jobs[0].status,
+          date: jobs[0].scheduled_date,
+          time: jobs[0].scheduled_start_time
+        })
+        console.log('   All job statuses:', [...new Set(jobs.map(j => j.status))])
+        setAllJobs(jobs)
       } else {
-        console.log('Jobs loaded for mobile:', jobs?.length || 0)
-        setAllJobs(jobs || [])
+        console.log('⚠️ MOBILE: No jobs found with status pending/scheduled/in_progress')
+        console.log('   Try running this SQL:')
+        console.log("   UPDATE jobs SET status = 'scheduled', scheduled_date = CURRENT_DATE WHERE status NOT IN ('completed','cancelled','on_hold')")
+        setAllJobs([])
       }
       
     } catch (error) {
-      console.error('Error:', error)
+      console.error('❌ MOBILE: Exception:', error.message)
+      toast.error('Error loading jobs')
     } finally {
       setLoadingAllJobs(false)
     }
@@ -133,7 +158,6 @@ export default function MobileHome() {
     navigate('/login')
   }
 
-  // START JOB - Any cleaner can start any scheduled job
   const handleStartJob = async (jobId) => {
     setUpdatingJob(jobId)
     try {
@@ -152,7 +176,6 @@ export default function MobileHome() {
     finally { setUpdatingJob(null) }
   }
 
-  // COMPLETE JOB - Any cleaner can complete any job
   const handleCompleteJob = async (jobId) => {
     if (!window.confirm('Mark as completed? This will send for invoicing.')) return
     setUpdatingJob(jobId)
@@ -172,7 +195,6 @@ export default function MobileHome() {
     finally { setUpdatingJob(null) }
   }
 
-  // PAUSE JOB - Paused jobs go to on_hold (hidden from mobile)
   const handlePauseJob = async (jobId) => {
     const reason = prompt('Reason for pausing this job:')
     if (reason === null) return
@@ -203,7 +225,6 @@ export default function MobileHome() {
 
   const todayStr = new Date().toISOString().split('T')[0]
 
-  // Filter jobs by search
   const filteredJobs = allJobs.filter(job => {
     if (!jobSearch) return true
     const s = jobSearch.toLowerCase()
@@ -213,11 +234,9 @@ export default function MobileHome() {
            (job.site_address || '').toLowerCase().includes(s)
   })
 
-  // Count jobs by status
   const scheduledCount = allJobs.filter(j => j.status === 'scheduled' || j.status === 'pending').length
   const inProgressCount = allJobs.filter(j => j.status === 'in_progress').length
 
-  // Date filter options
   const dateOptions = [
     { value: 'all', label: 'All Dates' },
     { value: todayStr, label: 'Today' },
@@ -238,7 +257,6 @@ export default function MobileHome() {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Pull to Refresh */}
       <AnimatePresence>
         {(pullDistance > 20 || refreshing) && (
           <motion.div 
@@ -254,7 +272,6 @@ export default function MobileHome() {
       </AnimatePresence>
 
       <div ref={scrollRef} className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 64px)' }}>
-        {/* Header */}
         <div className="px-5 pt-6 pb-6 text-white safe-area-top">
           <div className="flex justify-between items-start mb-1">
             <div className="flex-1">
@@ -273,14 +290,13 @@ export default function MobileHome() {
           <p className="text-5xl font-bold text-center my-3 font-mono tracking-wider">{formatTime(currentTime)}</p>
         </div>
 
-        {/* Stats */}
         <div className="px-5 -mt-3">
           <div className="grid grid-cols-4 gap-2">
             {[
               { icon: Briefcase, label: 'All Jobs', value: allJobs.length, color: 'from-blue-400 to-blue-500' },
               { icon: Calendar, label: 'Scheduled', value: scheduledCount, color: 'from-indigo-400 to-indigo-500' },
-              { icon: Clock, label: 'In Progress', value: inProgressCount, color: 'from-amber-400 to-amber-500' },
-              { icon: CheckCircle2, label: 'Done Today', value: stats.completedJobs || 0, color: 'from-green-400 to-green-500' },
+              { icon: Clock, label: 'Active', value: inProgressCount, color: 'from-amber-400 to-amber-500' },
+              { icon: CheckCircle2, label: 'Done', value: stats.completedJobs || 0, color: 'from-green-400 to-green-500' },
             ].map((s, i) => (
               <motion.div key={s.label} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
                 className={`bg-gradient-to-br ${s.color} rounded-2xl p-2.5 text-white text-center shadow-lg`}>
@@ -292,7 +308,6 @@ export default function MobileHome() {
           </div>
         </div>
 
-        {/* Quick Actions */}
         <div className="px-5 mt-4">
           <div className="grid grid-cols-2 gap-2">
             {[
@@ -311,78 +326,51 @@ export default function MobileHome() {
           </div>
         </div>
 
-        {/* ALL JOBS LIST */}
         <div className="px-5 mt-5 mb-4">
           <div className="flex justify-between items-center mb-3">
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <Briefcase className="w-4 h-4" />All Jobs
-            </h2>
+            <h2 className="text-base font-bold text-white flex items-center gap-2"><Briefcase className="w-4 h-4" />All Jobs</h2>
             <span className="text-xs text-white/70 bg-white/20 px-2 py-0.5 rounded-full">{filteredJobs.length} jobs</span>
           </div>
 
-          {/* Search & Date Filter */}
           <div className="mb-3 space-y-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
-              <input
-                type="text" value={jobSearch} onChange={e => setJobSearch(e.target.value)}
-                placeholder="Search by title, client, address..."
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white/15 text-white placeholder-white/40 text-sm border border-white/10 focus:outline-none focus:bg-white/25"
-              />
+              <input type="text" value={jobSearch} onChange={e => setJobSearch(e.target.value)}
+                placeholder="Search by title, client, address..." className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white/15 text-white placeholder-white/40 text-sm border border-white/10 focus:outline-none focus:bg-white/25" />
             </div>
             <div className="flex gap-2 overflow-x-auto pb-1">
               {dateOptions.map(opt => (
                 <button key={opt.value} onClick={() => setSelectedDate(opt.value)}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all ${
-                    selectedDate === opt.value ? 'bg-white text-emerald-700 shadow-lg' : 'bg-white/20 text-white hover:bg-white/30'
-                  }`}>
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all ${selectedDate === opt.value ? 'bg-white text-emerald-700 shadow-lg' : 'bg-white/20 text-white hover:bg-white/30'}`}>
                   {opt.label}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Jobs List */}
           {loadingAllJobs ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
-              <p className="text-white/60 text-xs mt-2">Loading jobs...</p>
-            </div>
+            <div className="text-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div></div>
           ) : filteredJobs.length > 0 ? (
             <div className="space-y-2">
               {filteredJobs.map((job, i) => {
                 const isToday = job.scheduled_date === todayStr
                 return (
-                  <motion.div 
-                    key={job.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
-                    className={`bg-white rounded-2xl p-4 shadow-md ${!isToday ? 'border-l-4 border-l-amber-400' : ''}`}
-                  >
-                    {/* Job Header */}
+                  <motion.div key={job.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
+                    className={`bg-white rounded-2xl p-4 shadow-md ${!isToday ? 'border-l-4 border-l-amber-400' : ''}`}>
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex-1" onClick={() => navigate(`/mobile/jobs/${job.id}`)}>
                         <h3 className="font-semibold text-slate-800 text-sm">{job.title}</h3>
                         <p className="text-xs text-slate-400">{job.job_number} · {job.clients?.company_name || 'Client'}</p>
                       </div>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ml-2 ${
-                        job.status === 'in_progress' ? 'bg-amber-100 text-amber-700' :
-                        'bg-blue-100 text-blue-700'
-                      }`}>{(job.status || 'pending').replace('_', ' ')}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ml-2 ${job.status === 'in_progress' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{(job.status || 'pending').replace('_', ' ')}</span>
                     </div>
-
-                    {/* Job Info */}
                     <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
                       <Calendar className="w-3 h-3" />
-                      <span className={!isToday ? 'text-amber-600 font-medium' : ''}>
-                        {isToday ? 'Today' : formatDateShort(job.scheduled_date)}
-                      </span>
+                      <span className={!isToday ? 'text-amber-600 font-medium' : ''}>{isToday ? 'Today' : formatDateShort(job.scheduled_date)}</span>
                       <span className="mx-1">·</span>
                       <Clock className="w-3 h-3" />{job.scheduled_start_time?.slice(0,5)}-{job.scheduled_end_time?.slice(0,5)}
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-slate-500 mb-3">
-                      <MapPin className="w-3 h-3" />{job.site_address?.slice(0, 40)}
-                    </div>
-
-                    {/* Action Buttons - Available for ALL cleaners */}
+                    <div className="flex items-center gap-2 text-xs text-slate-500 mb-3"><MapPin className="w-3 h-3" />{job.site_address?.slice(0, 40)}</div>
                     <div className="flex gap-2">
                       {(job.status === 'scheduled' || job.status === 'pending') && (
                         <button onClick={() => handleStartJob(job.id)} disabled={updatingJob === job.id}
@@ -403,13 +391,8 @@ export default function MobileHome() {
                         </>
                       )}
                     </div>
-
-                    {/* Client Call */}
                     {job.clients?.phone && (
-                      <a href={`tel:${job.clients.phone}`} 
-                        className="mt-2 text-xs text-emerald-600 flex items-center gap-1 bg-emerald-50 rounded-lg px-2 py-1 w-fit">
-                        📞 {job.clients.company_name?.split(' ')[0]}
-                      </a>
+                      <a href={`tel:${job.clients.phone}`} className="mt-2 text-xs text-emerald-600 flex items-center gap-1 bg-emerald-50 rounded-lg px-2 py-1 w-fit">📞 {job.clients.company_name?.split(' ')[0]}</a>
                     )}
                   </motion.div>
                 )
