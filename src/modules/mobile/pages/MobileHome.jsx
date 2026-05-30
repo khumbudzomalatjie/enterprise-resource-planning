@@ -9,7 +9,7 @@ import { supabase } from '../../../lib/supabaseClient'
 import { 
   Briefcase, Clock, CheckCircle2, MapPin, 
   Camera, AlertCircle, Package, LogOut,
-  Pause, RefreshCw, ChevronDown,
+  Play, RefreshCw, ChevronDown,
   Calendar, Search, List, User, Users,
   Hand
 } from 'lucide-react'
@@ -63,44 +63,22 @@ export default function MobileHome() {
     await setupEmployee()
   }
 
-  // Find or create employee record
   const setupEmployee = async () => {
     try {
-      // Try by user_id
-      let { data: emp } = await supabase
-        .from('employees')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single()
-
+      let { data: emp } = await supabase.from('employees').select('id').eq('user_id', user?.id).single()
       if (emp) { setMyEmployeeId(emp.id); return }
 
-      // Try by email
-      const { data: empByEmail } = await supabase
-        .from('employees')
-        .select('id')
-        .eq('email', user?.email)
-        .single()
-
+      const { data: empByEmail } = await supabase.from('employees').select('id').eq('email', user?.email).single()
       if (empByEmail) {
         await supabase.from('employees').update({ user_id: user?.id }).eq('id', empByEmail.id)
         setMyEmployeeId(empByEmail.id)
         return
       }
 
-      // Create new
-      const { data: newEmp } = await supabase
-        .from('employees')
-        .insert([{
-          user_id: user?.id,
-          first_name: user?.email?.split('@')[0] || 'Cleaner',
-          last_name: '',
-          email: user?.email,
-          employment_status: 'active',
-          department: 'Cleaning'
-        }])
-        .select('id')
-        .single()
+      const { data: newEmp } = await supabase.from('employees').insert([{
+        user_id: user?.id, first_name: user?.email?.split('@')[0] || 'Cleaner', last_name: '',
+        email: user?.email, employment_status: 'active', department: 'Cleaning'
+      }]).select('id').single()
 
       if (newEmp) setMyEmployeeId(newEmp.id)
     } catch (e) { console.error('Setup error:', e) }
@@ -110,7 +88,7 @@ export default function MobileHome() {
     setLoadingAllJobs(true)
     
     try {
-      // OPEN POOL: status = pending or scheduled
+      // OPEN POOL: pending or scheduled
       let openQuery = supabase
         .from('jobs')
         .select('id, title, job_number, status, scheduled_date, scheduled_start_time, scheduled_end_time, site_address, notes, clients(company_name, phone), job_categories(name, color)')
@@ -119,13 +97,10 @@ export default function MobileHome() {
         .order('scheduled_start_time', { ascending: true })
 
       if (selectedDate !== 'all') openQuery = openQuery.eq('scheduled_date', selectedDate)
-
       const { data: openJobs } = await openQuery
-      console.log('📋 Open Pool:', openJobs?.length || 0)
       setAllOpenJobs(openJobs || [])
 
-      // MY JOBS: All in_progress jobs (any cleaner's jobs show here)
-      // The cleaner who selected it is stored in the notes field
+      // MY JOBS: All in_progress jobs
       let myQuery = supabase
         .from('jobs')
         .select('id, title, job_number, status, scheduled_date, scheduled_start_time, scheduled_end_time, site_address, notes, clients(company_name, phone), job_categories(name, color)')
@@ -134,16 +109,11 @@ export default function MobileHome() {
         .order('scheduled_start_time', { ascending: true })
 
       if (selectedDate !== 'all') myQuery = myQuery.eq('scheduled_date', selectedDate)
-
       const { data: myJobsData } = await myQuery
-      console.log('👤 My Jobs:', myJobsData?.length || 0)
       setMyActiveJobs(myJobsData || [])
 
-    } catch (error) {
-      console.error('Error:', error)
-    } finally {
-      setLoadingAllJobs(false)
-    }
+    } catch (error) { console.error('Error:', error) }
+    finally { setLoadingAllJobs(false) }
   }
 
   const handleRefresh = async () => {
@@ -169,13 +139,12 @@ export default function MobileHome() {
 
   const handleSignOut = async () => { await signOut(); navigate('/login') }
 
-  // SELECT JOB
+  // SELECT JOB - Moves from Open Pool to My Jobs
   const handleSelectJob = async (jobId) => {
     if (!myEmployeeId) { toast.error('Profile not ready. Refresh and try again.'); return }
     setUpdatingJob(jobId)
     
     try {
-      // Get cleaner name for the notes
       const cleanerName = myProfile?.first_name || user?.email?.split('@')[0] || 'Cleaner'
       
       const { error } = await supabase
@@ -184,28 +153,31 @@ export default function MobileHome() {
           status: 'in_progress',
           actual_start_time: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          // Store who picked it up in the notes field
-          notes: `SELECTED BY: ${cleanerName} (${myEmployeeId}) at ${new Date().toLocaleString()}`
+          notes: `SELECTED BY: ${cleanerName} at ${new Date().toLocaleString()}`
         })
         .eq('id', jobId)
 
-      if (error) {
-        console.error('❌ Update failed:', error.message)
-        toast.error('Failed to select job')
-        return
-      }
+      if (error) { toast.error('Failed to select job'); return }
 
-      console.log('✅ Job selected by:', cleanerName)
       toast.success('Job selected! ✅')
       await loadAllJobs()
-      setActiveTab('mine') // Auto-switch to My Jobs
+      setActiveTab('mine')
       
-    } catch (error) {
-      console.error('❌ Exception:', error)
-      toast.error('Failed')
-    } finally {
-      setUpdatingJob(null)
-    }
+    } catch (error) { toast.error('Failed') }
+    finally { setUpdatingJob(null) }
+  }
+
+  // START JOB - For jobs that are selected but not yet started
+  const handleStartJob = async (jobId) => {
+    setUpdatingJob(jobId)
+    try {
+      await supabase.from('jobs').update({ 
+        status: 'in_progress', actual_start_time: new Date().toISOString(), updated_at: new Date().toISOString()
+      }).eq('id', jobId)
+      toast.success('Job started! 🚀')
+      loadAllJobs()
+    } catch { toast.error('Failed') }
+    finally { setUpdatingJob(null) }
   }
 
   // COMPLETE JOB
@@ -217,21 +189,6 @@ export default function MobileHome() {
         status: 'completed', actual_end_time: new Date().toISOString(), updated_at: new Date().toISOString()
       }).eq('id', jobId)
       toast.success('Completed! Moving to finance ✅')
-      loadAllJobs()
-    } catch { toast.error('Failed') }
-    finally { setUpdatingJob(null) }
-  }
-
-  // PAUSE JOB
-  const handlePauseJob = async (jobId) => {
-    const reason = prompt('Reason for pausing:')
-    if (!reason) return
-    setUpdatingJob(jobId)
-    try {
-      await supabase.from('jobs').update({ 
-        status: 'on_hold', updated_at: new Date().toISOString()
-      }).eq('id', jobId)
-      toast.success('Paused - supervisor will review')
       loadAllJobs()
     } catch { toast.error('Failed') }
     finally { setUpdatingJob(null) }
@@ -282,6 +239,7 @@ export default function MobileHome() {
       </AnimatePresence>
 
       <div ref={scrollRef} className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 64px)' }}>
+        {/* Header */}
         <div className="px-5 pt-6 pb-6 text-white">
           <div className="flex justify-between items-start mb-1">
             <div className="flex-1">
@@ -296,6 +254,7 @@ export default function MobileHome() {
           <p className="text-5xl font-bold text-center my-3 font-mono tracking-wider">{formatTime(currentTime)}</p>
         </div>
 
+        {/* Stats */}
         <div className="px-5 -mt-3">
           <div className="grid grid-cols-4 gap-2">
             {[
@@ -314,6 +273,7 @@ export default function MobileHome() {
           </div>
         </div>
 
+        {/* Quick Actions */}
         <div className="px-5 mt-4">
           <div className="grid grid-cols-2 gap-2">
             {[
@@ -330,6 +290,7 @@ export default function MobileHome() {
           </div>
         </div>
 
+        {/* Tabs */}
         <div className="px-5 mt-5">
           <div className="flex gap-2 bg-white/10 rounded-2xl p-1">
             <button onClick={() => setActiveTab('all')}
@@ -343,6 +304,7 @@ export default function MobileHome() {
           </div>
         </div>
 
+        {/* Search & Date */}
         <div className="px-5 mt-3 mb-3 space-y-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
@@ -357,7 +319,7 @@ export default function MobileHome() {
           </div>
         </div>
 
-        {/* OPEN POOL */}
+        {/* OPEN POOL TAB */}
         {activeTab === 'all' && (
           <div className="px-5 mb-4">
             {loadingAllJobs ? <div className="text-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div></div>
@@ -383,7 +345,7 @@ export default function MobileHome() {
           </div>
         )}
 
-        {/* MY JOBS - Shows ALL in_progress jobs */}
+        {/* MY JOBS TAB - Start & Complete buttons */}
         {activeTab === 'mine' && (
           <div className="px-5 mb-4">
             {loadingAllJobs ? <div className="text-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div></div>
@@ -396,7 +358,6 @@ export default function MobileHome() {
                       <div className="flex-1" onClick={() => navigate(`/mobile/jobs/${job.id}`)}>
                         <h3 className="font-semibold text-slate-800 text-sm">{job.title}</h3>
                         <p className="text-xs text-slate-400">{job.job_number} · {job.clients?.company_name || 'Client'}</p>
-                        {/* Show who selected it */}
                         {job.notes?.includes('SELECTED BY:') && (
                           <p className="text-[10px] text-amber-600 mt-0.5">{job.notes.split('at')[0]}</p>
                         )}
@@ -405,12 +366,20 @@ export default function MobileHome() {
                     </div>
                     <div className="flex items-center gap-2 text-xs text-slate-500 mb-2"><Calendar className="w-3 h-3" /><span>{job.scheduled_date === todayStr ? 'Today' : formatDateShort(job.scheduled_date)}</span><span className="mx-1">·</span><Clock className="w-3 h-3" />{job.scheduled_start_time?.slice(0,5)}-{job.scheduled_end_time?.slice(0,5)}</div>
                     <div className="flex items-center gap-2 text-xs text-slate-500 mb-3"><MapPin className="w-3 h-3" />{job.site_address?.slice(0, 40)}</div>
+                    
+                    {/* BUTTONS: Start & Complete */}
                     <div className="flex gap-2 mb-2">
+                      <button onClick={() => handleStartJob(job.id)} disabled={updatingJob === job.id}
+                        className="flex-1 py-2.5 bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50 shadow-sm">
+                        <Play className="w-3.5 h-3.5" /> Start Job
+                      </button>
                       <button onClick={() => handleCompleteJob(job.id)} disabled={updatingJob === job.id}
-                        className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50 shadow-sm"><CheckCircle2 className="w-3.5 h-3.5" />Complete</button>
-                      <button onClick={() => handlePauseJob(job.id)} disabled={updatingJob === job.id}
-                        className="flex-1 py-2.5 bg-amber-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50 shadow-sm"><Pause className="w-3.5 h-3.5" />Pause</button>
+                        className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50 shadow-sm">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Complete
+                      </button>
                     </div>
+
+                    {/* Quick Actions */}
                     <div className="grid grid-cols-3 gap-1.5">
                       <button onClick={() => navigate('/mobile/photos')} className="py-2 bg-blue-50 text-blue-700 rounded-lg text-[10px] font-medium flex items-center justify-center gap-1"><Camera className="w-3 h-3" /> Photos</button>
                       <button onClick={() => navigate('/mobile/supplies')} className="py-2 bg-purple-50 text-purple-700 rounded-lg text-[10px] font-medium flex items-center justify-center gap-1"><Package className="w-3 h-3" /> Supplies</button>
