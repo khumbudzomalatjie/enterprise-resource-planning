@@ -10,7 +10,8 @@ import {
   Briefcase, Clock, CheckCircle2, MapPin, 
   Camera, AlertCircle, Package, LogOut,
   Play, Pause, RefreshCw, ChevronDown,
-  Calendar, Search, List, User, Users
+  Calendar, Search, List, User, Users,
+  Hand
 } from 'lucide-react'
 
 export default function MobileHome() {
@@ -83,7 +84,6 @@ export default function MobileHome() {
       else setAllOpenJobs(openJobs || [])
 
       // 2. Load THIS cleaner's active jobs (in_progress) - assigned to them
-      // Get employee ID for this user
       const { data: employee } = await supabase
         .from('employees')
         .select('id')
@@ -151,8 +151,8 @@ export default function MobileHome() {
     navigate('/login')
   }
 
-  // START JOB - Moves from Open Pool to My Jobs
-  const handleStartJob = async (jobId) => {
+  // SELECT JOB - Moves from Open Pool to My Jobs
+  const handleSelectJob = async (jobId) => {
     setUpdatingJob(jobId)
     try {
       // Get employee ID
@@ -180,11 +180,11 @@ export default function MobileHome() {
       
       if (error) throw error
 
-      toast.success('Job started! Now in My Jobs 🚀')
+      toast.success('Job selected! Now in My Jobs ✅')
       loadAllJobs()
     } catch (error) {
-      console.error('Start job error:', error)
-      toast.error('Failed to start job')
+      console.error('Select job error:', error)
+      toast.error('Failed to select job')
     }
     finally { setUpdatingJob(null) }
   }
@@ -375,7 +375,7 @@ export default function MobileHome() {
           </div>
         </div>
 
-        {/* OPEN POOL TAB - All scheduled jobs any cleaner can pick up */}
+        {/* OPEN POOL TAB */}
         {activeTab === 'all' && (
           <div className="px-5 mb-4">
             {loadingAllJobs ? (
@@ -401,9 +401,9 @@ export default function MobileHome() {
                         <Clock className="w-3 h-3" />{job.scheduled_start_time?.slice(0,5)}-{job.scheduled_end_time?.slice(0,5)}
                       </div>
                       <div className="flex items-center gap-2 text-xs text-slate-500 mb-3"><MapPin className="w-3 h-3" />{job.site_address?.slice(0, 40)}</div>
-                      <button onClick={() => handleStartJob(job.id)} disabled={updatingJob === job.id}
-                        className="w-full py-2.5 bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all disabled:opacity-50 shadow-sm">
-                        <Play className="w-3.5 h-3.5" />Start Job - Assign to Me
+                      <button onClick={() => handleSelectJob(job.id)} disabled={updatingJob === job.id}
+                        className="w-full py-2.5 bg-emerald-500 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50 shadow-sm">
+                        <Hand className="w-4 h-4" /> Select Job
                       </button>
                     </motion.div>
                   )
@@ -419,7 +419,7 @@ export default function MobileHome() {
           </div>
         )}
 
-        {/* MY JOBS TAB - Jobs this cleaner is working on */}
+        {/* MY JOBS TAB */}
         {activeTab === 'mine' && (
           <div className="px-5 mb-4">
             {loadingAllJobs ? (
