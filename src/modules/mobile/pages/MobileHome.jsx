@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import useAuthStore from '../../../store/authStore'
@@ -55,7 +55,6 @@ export default function MobileHome() {
     toast.success('Refreshed!', { duration: 1500 })
   }
 
-  // Pull-to-refresh handlers
   const handleTouchStart = (e) => {
     if (scrollRef.current?.scrollTop === 0) {
       touchStartY.current = e.touches[0].clientY
@@ -80,12 +79,6 @@ export default function MobileHome() {
     setIsPulling(false)
   }
 
-  // Scroll to top
-  const scrollToTop = () => {
-    scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  // Scroll to jobs section
   const scrollToJobs = () => {
     document.getElementById('jobs-section')?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -116,9 +109,11 @@ export default function MobileHome() {
     finally { setUpdatingJob(null) }
   }
 
+  // Cleaners can PAUSE but NOT put on "hold" - that's for managers only
   const handlePauseJob = async (jobId) => {
     setUpdatingJob(jobId)
     try {
+      // Cleaners can only pause (on_hold for them is temporary)
       await supabase.from('jobs').update({ status: 'on_hold' }).eq('id', jobId)
       toast.success('Job paused')
       loadData()
@@ -129,7 +124,10 @@ export default function MobileHome() {
   const formatTime = (date) => date.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })
   const formatDate = (date) => date.toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long' })
 
-  const activeJobs = (myJobs || []).filter(job => job.status !== 'completed')
+  // Filter out completed AND held jobs from mobile view
+  const activeJobs = (myJobs || []).filter(job => 
+    job.status !== 'completed' && job.status !== 'on_hold'
+  )
 
   return (
     <div 
@@ -177,13 +175,9 @@ export default function MobileHome() {
           </div>
           <p className="text-5xl font-bold text-center my-3 font-mono tracking-wider">{formatTime(currentTime)}</p>
           
-          {/* Quick Jump */}
           <div className="flex justify-center gap-3 mt-1">
             <button onClick={scrollToJobs} className="text-xs text-white/70 hover:text-white flex items-center gap-1 bg-white/10 px-3 py-1 rounded-full">
               <ChevronDown className="w-3 h-3" /> View Jobs
-            </button>
-            <button onClick={scrollToTop} className="text-xs text-white/70 hover:text-white bg-white/10 px-3 py-1 rounded-full">
-              ↑ Top
             </button>
           </div>
         </div>
@@ -300,7 +294,6 @@ export default function MobileHome() {
           )}
         </div>
 
-        {/* Bottom Padding for scroll */}
         <div className="h-4" />
       </div>
 
