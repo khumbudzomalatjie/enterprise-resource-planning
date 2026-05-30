@@ -302,218 +302,78 @@ export const hrApi = {
   },
 
   // ============================================
-  // PERFORMANCE REVIEWS
-  // ============================================
-
-  async getPerformanceReviews(employeeId = null) {
-    let query = supabase
-      .from('performance_reviews')
-      .select('*, employees(first_name, last_name)')
-      .order('review_date', { ascending: false })
-
-    if (employeeId) query = query.eq('employee_id', employeeId)
-
-    const { data, error } = await query
-    return { data, error }
-  },
-
-  async createPerformanceReview(reviewData) {
-    const { data, error } = await supabase
-      .from('performance_reviews')
-      .insert([reviewData])
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  async updatePerformanceReview(id, updates) {
-    const { data, error } = await supabase
-      .from('performance_reviews')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  // ============================================
   // STORAGE FUNCTIONS - PHOTO UPLOAD
   // ============================================
 
   async uploadEmployeePhoto(employeeId, file) {
     try {
-      if (!employeeId || !file) {
-        return { error: { message: 'Employee ID and file are required' } }
-      }
-
+      if (!employeeId || !file) return { error: { message: 'Employee ID and file are required' } }
       const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/jpg']
-      if (!allowedTypes.includes(file.type)) {
-        return { error: { message: `Invalid file type. Only JPG, PNG, GIF, WebP allowed.` } }
-      }
-
-      const maxSize = 5 * 1024 * 1024
-      if (file.size > maxSize) {
-        return { error: { message: 'File too large. Maximum size is 5MB.' } }
-      }
+      if (!allowedTypes.includes(file.type)) return { error: { message: 'Invalid file type' } }
+      if (file.size > 5 * 1024 * 1024) return { error: { message: 'File too large. Max 5MB.' } }
 
       const fileExt = (file.name.split('.').pop() || 'jpg').toLowerCase()
-      const cleanFileName = `photo_${Date.now()}.${fileExt}`
-      const filePath = `${employeeId}/${cleanFileName}`
+      const filePath = `${employeeId}/photo_${Date.now()}.${fileExt}`
       
-      const { data, error } = await supabase.storage
-        .from('employee-photos')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true,
-          contentType: file.type
-        })
-
-      if (error) {
-        if (error.message.includes('bucket') || error.message.includes('not found')) {
-          return { error: { message: 'Storage bucket not found. Please create "employee-photos" bucket in Supabase.' } }
-        }
-        return { error: { message: `Upload failed: ${error.message}` } }
-      }
+      const { error } = await supabase.storage.from('employee-photos').upload(filePath, file, { cacheControl: '3600', upsert: true, contentType: file.type })
+      if (error) return { error: { message: error.message } }
 
       const { data: urlData } = supabase.storage.from('employee-photos').getPublicUrl(filePath)
       const publicUrl = urlData?.publicUrl
-
-      if (!publicUrl) {
-        return { error: { message: 'Failed to get public URL' } }
-      }
+      if (!publicUrl) return { error: { message: 'Failed to get public URL' } }
       
-      const { error: updateError } = await supabase
-        .from('employees')
-        .update({ profile_photo_url: publicUrl })
-        .eq('id', employeeId)
-
-      if (updateError) {
-        return { data: { url: publicUrl }, error: null, warning: 'Photo uploaded but profile update failed' }
-      }
-
-      return { data: { path: filePath, url: publicUrl }, error: null }
-    } catch (err) {
-      return { error: { message: err.message || 'Unknown error' } }
-    }
-  },
-
-  // ============================================
-  // STORAGE FUNCTIONS - DOCUMENT UPLOAD
-  // ============================================
-
-  async uploadEmployeeDocument(employeeId, file) {
-    try {
-      if (!employeeId || !file) {
-        return { error: { message: 'Employee ID and file are required' } }
-      }
-
-      const maxSize = 10 * 1024 * 1024
-      if (file.size > maxSize) {
-        return { error: { message: 'File too large. Maximum size is 10MB.' } }
-      }
-
-      const timestamp = Date.now()
-      const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-      const filePath = `${employeeId}/${timestamp}_${safeFileName}`
-      
-      const { data, error } = await supabase.storage
-        .from('employee-documents')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false,
-          contentType: file.type || 'application/octet-stream'
-        })
-
-      if (error) {
-        if (error.message.includes('bucket') || error.message.includes('not found')) {
-          return { error: { message: 'Storage bucket not found. Please create "employee-documents" bucket in Supabase.' } }
-        }
-        return { error: { message: `Upload failed: ${error.message}` } }
-      }
-
-      const { data: urlData } = supabase.storage.from('employee-documents').getPublicUrl(filePath)
-      const publicUrl = urlData?.publicUrl
-
-      if (!publicUrl) {
-        return { error: { message: 'Failed to get public URL' } }
-      }
-      
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      const { data: docData, error: docError } = await supabase
-        .from('employee_documents')
-        .insert([{
-          employee_id: employeeId,
-          document_type: 'other',
-          document_name: file.name,
-          document_url: publicUrl,
-          uploaded_by: user?.id
-        }])
-        .select()
-        .single()
-
-      if (docError) {
-        return { data: { url: publicUrl, document_name: file.name }, error: null, warning: 'File uploaded but record creation failed' }
-      }
-
-      return { data: { ...docData, url: publicUrl }, error: null }
-    } catch (err) {
-      return { error: { message: err.message || 'Unknown error' } }
-    }
-  },
-
-  // ============================================
-  // STORAGE FUNCTIONS - GET / DELETE DOCUMENTS
-  // ============================================
-
-  async getEmployeeDocuments(employeeId) {
-    const { data, error } = await supabase
-      .from('employee_documents')
-      .select('*')
-      .eq('employee_id', employeeId)
-      .order('uploaded_at', { ascending: false })
-    return { data, error }
-  },
-
-  async deleteEmployeeDocument(documentId) {
-    try {
-      const { data: doc, error: fetchError } = await supabase
-        .from('employee_documents')
-        .select('*')
-        .eq('id', documentId)
-        .single()
-
-      if (fetchError) return { error: fetchError }
-      if (!doc) return { error: { message: 'Document not found' } }
-
-      const url = doc.document_url
-      if (url) {
-        const urlParts = url.split('/')
-        const bucketIndex = urlParts.indexOf('employee-documents')
-        if (bucketIndex !== -1) {
-          const storagePath = urlParts.slice(bucketIndex + 1).join('/')
-          await supabase.storage.from('employee-documents').remove([storagePath])
-        }
-      }
-
-      const { error } = await supabase
-        .from('employee_documents')
-        .delete()
-        .eq('id', documentId)
-
-      return { error }
+      await supabase.from('employees').update({ profile_photo_url: publicUrl }).eq('id', employeeId)
+      return { data: { url: publicUrl }, error: null }
     } catch (err) {
       return { error: { message: err.message } }
     }
   },
 
-  async getDocumentForView(documentId) {
-    const { data: doc, error } = await supabase
-      .from('employee_documents')
-      .select('*')
-      .eq('id', documentId)
-      .single()
-    return { data: doc, error }
+  async uploadEmployeeDocument(employeeId, file) {
+    try {
+      if (!employeeId || !file) return { error: { message: 'Required data missing' } }
+      if (file.size > 10 * 1024 * 1024) return { error: { message: 'File too large. Max 10MB.' } }
+
+      const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+      const filePath = `${employeeId}/${Date.now()}_${safeFileName}`
+      
+      const { error } = await supabase.storage.from('employee-documents').upload(filePath, file, { cacheControl: '3600', upsert: false, contentType: file.type || 'application/octet-stream' })
+      if (error) return { error: { message: error.message } }
+
+      const { data: urlData } = supabase.storage.from('employee-documents').getPublicUrl(filePath)
+      const publicUrl = urlData?.publicUrl
+      if (!publicUrl) return { error: { message: 'Failed to get public URL' } }
+      
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data: docData, error: docError } = await supabase.from('employee_documents').insert([{
+        employee_id: employeeId, document_type: 'other', document_name: file.name, document_url: publicUrl, uploaded_by: user?.id
+      }]).select().single()
+
+      return { data: { ...docData, url: publicUrl }, error: docError }
+    } catch (err) {
+      return { error: { message: err.message } }
+    }
+  },
+
+  async getEmployeeDocuments(employeeId) {
+    const { data, error } = await supabase.from('employee_documents').select('*').eq('employee_id', employeeId).order('uploaded_at', { ascending: false })
+    return { data, error }
+  },
+
+  async deleteEmployeeDocument(documentId) {
+    try {
+      const { data: doc } = await supabase.from('employee_documents').select('*').eq('id', documentId).single()
+      if (!doc) return { error: { message: 'Document not found' } }
+      if (doc.document_url) {
+        const urlParts = doc.document_url.split('/')
+        const bucketIndex = urlParts.indexOf('employee-documents')
+        if (bucketIndex !== -1) await supabase.storage.from('employee-documents').remove([urlParts.slice(bucketIndex + 1).join('/')])
+      }
+      const { error } = await supabase.from('employee_documents').delete().eq('id', documentId)
+      return { error }
+    } catch (err) {
+      return { error: { message: err.message } }
+    }
   },
 
   // ============================================
@@ -523,12 +383,8 @@ export const hrApi = {
   async getHRStats() {
     try {
       const [
-        { count: totalEmployees },
-        { count: activeEmployees },
-        { count: pendingLeave },
-        { count: activeContracts },
-        { count: ongoingTraining },
-        { count: disciplinaryCases }
+        { count: totalEmployees }, { count: activeEmployees }, { count: pendingLeave },
+        { count: activeContracts }, { count: ongoingTraining }, { count: disciplinaryCases }
       ] = await Promise.all([
         supabase.from('employees').select('*', { count: 'exact', head: true }),
         supabase.from('employees').select('*', { count: 'exact', head: true }).eq('employment_status', 'active'),
@@ -537,48 +393,19 @@ export const hrApi = {
         supabase.from('training_records').select('*', { count: 'exact', head: true }).eq('status', 'in_progress'),
         supabase.from('disciplinary_records').select('*', { count: 'exact', head: true }),
       ])
-
-      return {
-        totalEmployees: totalEmployees || 0,
-        activeEmployees: activeEmployees || 0,
-        pendingLeave: pendingLeave || 0,
-        activeContracts: activeContracts || 0,
-        ongoingTraining: ongoingTraining || 0,
-        disciplinaryCases: disciplinaryCases || 0,
-      }
+      return { totalEmployees: totalEmployees || 0, activeEmployees: activeEmployees || 0, pendingLeave: pendingLeave || 0, activeContracts: activeContracts || 0, ongoingTraining: ongoingTraining || 0, disciplinaryCases: disciplinaryCases || 0 }
     } catch (error) {
       return { totalEmployees: 0, activeEmployees: 0, pendingLeave: 0, activeContracts: 0, ongoingTraining: 0, disciplinaryCases: 0 }
     }
   },
 
-  // ============================================
-  // BULK OPERATIONS
-  // ============================================
-
   async bulkUpdateEmployeeStatus(employeeIds, status) {
-    const { data, error } = await supabase
-      .from('employees')
-      .update({ employment_status: status })
-      .in('id', employeeIds)
-      .select()
-    return { data, error }
-  },
-
-  async getEmployeesByDepartment() {
-    const { data, error } = await supabase
-      .from('employees')
-      .select('department, count')
-      .not('department', 'is', null)
-      .order('department')
+    const { data, error } = await supabase.from('employees').update({ employment_status: status }).in('id', employeeIds).select()
     return { data, error }
   },
 
   async searchEmployees(query) {
-    const { data, error } = await supabase
-      .from('employees')
-      .select('id, first_name, last_name, employee_code, email, position, department')
-      .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,employee_code.ilike.%${query}%`)
-      .limit(20)
+    const { data, error } = await supabase.from('employees').select('id, first_name, last_name, employee_code, email, position, department').or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,employee_code.ilike.%${query}%`).limit(20)
     return { data, error }
   },
 }
