@@ -78,7 +78,7 @@ export default function LiveJobs() {
       if (name && name !== 'undefined') return name
     }
     
-    // Generic name match
+    // Generic name match - look for "Name at date" pattern
     const nameMatch = job.notes.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+at\s+/)
     if (nameMatch && nameMatch[1] && nameMatch[1] !== 'undefined') {
       return nameMatch[1]
@@ -87,17 +87,20 @@ export default function LiveJobs() {
     return null
   }
 
-  // Get status label for cleaner column
+  // Get status label for cleaner column - FIXED
   const getCleanerStatus = (job) => {
     const name = getCleanerName(job)
-    if (name) return { name, hasCleaner: true }
     
+    if (name) {
+      return { name, hasCleaner: true }
+    }
+    
+    // Only show "Available" for open jobs without a cleaner
     if (job.status === 'pending' || job.status === 'scheduled') {
       return { name: 'Available', hasCleaner: false }
     }
-    if (job.status === 'completed') {
-      return { name: 'Completed', hasCleaner: false }
-    }
+    
+    // For completed, on_hold, or any other status without a name
     return { name: 'Unassigned', hasCleaner: false }
   }
 
@@ -305,9 +308,7 @@ export default function LiveJobs() {
                               </div>
                             ) : (
                               <span className={`text-xs italic ${
-                                cleanerInfo.name === 'Available' ? 'text-blue-400' : 
-                                cleanerInfo.name === 'Completed' ? 'text-emerald-400' : 
-                                'text-slate-400'
+                                cleanerInfo.name === 'Available' ? 'text-blue-400' : 'text-slate-400'
                               }`}>
                                 {cleanerInfo.name}
                               </span>
