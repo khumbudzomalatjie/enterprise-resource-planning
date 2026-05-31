@@ -88,7 +88,6 @@ export default function MobileHome() {
     setLoadingAllJobs(true)
     
     try {
-      // OPEN POOL: pending or scheduled
       let openQuery = supabase
         .from('jobs')
         .select('id, title, job_number, status, scheduled_date, scheduled_start_time, scheduled_end_time, site_address, notes, clients(company_name, phone), job_categories(name, color)')
@@ -100,7 +99,6 @@ export default function MobileHome() {
       const { data: openJobs } = await openQuery
       setAllOpenJobs(openJobs || [])
 
-      // MY JOBS: Only in_progress
       let myQuery = supabase
         .from('jobs')
         .select('id, title, job_number, status, scheduled_date, scheduled_start_time, scheduled_end_time, site_address, notes, clients(company_name, phone), job_categories(name, color)')
@@ -139,7 +137,6 @@ export default function MobileHome() {
 
   const handleSignOut = async () => { await signOut(); navigate('/login') }
 
-  // SELECT JOB
   const handleSelectJob = async (jobId) => {
     if (!myEmployeeId) { toast.error('Profile not ready. Refresh and try again.'); return }
     setUpdatingJob(jobId)
@@ -153,13 +150,13 @@ export default function MobileHome() {
           status: 'in_progress',
           actual_start_time: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          notes: `SELECTED BY: ${cleanerName} at ${new Date().toLocaleString()}`
+          notes: 'SELECTED BY: ' + cleanerName + ' at ' + new Date().toLocaleString()
         })
         .eq('id', jobId)
 
       if (error) { toast.error('Failed to select job'); return }
 
-      toast.success('Job selected! ✅')
+      toast.success('Job selected!')
       await loadAllJobs()
       setActiveTab('mine')
       
@@ -167,64 +164,41 @@ export default function MobileHome() {
     finally { setUpdatingJob(null) }
   }
 
-  // START JOB
   const handleStartJob = async (jobId) => {
     setUpdatingJob(jobId)
     try {
       await supabase.from('jobs').update({ 
         status: 'in_progress', actual_start_time: new Date().toISOString(), updated_at: new Date().toISOString()
       }).eq('id', jobId)
-      toast.success('Job started! 🚀')
+      toast.success('Job started!')
       loadAllJobs()
     } catch { toast.error('Failed') }
     finally { setUpdatingJob(null) }
   }
 
-  // COMPLETE JOB - FIXED: Safe update that works with any column setup
   const handleCompleteJob = async (jobId) => {
-    if (!window.confirm('Mark as completed? This will send for invoicing and disappear from your list.')) return
+    if (!window.confirm('Mark as completed?')) return
     setUpdatingJob(jobId)
     
     try {
-      console.log('📝 Attempting to complete job:', jobId)
-      
-      // Try basic update first (only essential fields)
       const { error } = await supabase
         .from('jobs')
-        .update({ 
-          status: 'completed',
-          updated_at: new Date().toISOString()
-        })
+        .update({ status: 'completed', updated_at: new Date().toISOString() })
         .eq('id', jobId)
 
       if (error) {
-        console.error('❌ Complete error:', error.message)
-        
-        // If it's a constraint error, the status might not be in the allowed list
-        if (error.message.includes('constraint') || error.message.includes('check')) {
-          toast.error('Database constraint issue. Please run the SQL fix in Supabase.')
-          console.log('Run this SQL: ALTER TABLE jobs DROP CONSTRAINT IF EXISTS jobs_status_check; ALTER TABLE jobs ADD CONSTRAINT jobs_status_check CHECK (status IN (''pending'',''scheduled'',''in_progress'',''completed'',''cancelled'',''on_hold''));')
-        } else {
-          toast.error('Failed: ' + error.message)
-        }
+        console.error('Complete error:', error.message)
+        toast.error('Failed: ' + error.message)
         return
       }
 
-      console.log('✅ Job completed successfully')
-      toast.success('Completed! Moving to finance ✅')
-      
-      // Refresh lists
+      toast.success('Completed! Moving to finance')
       await loadAllJobs()
       
-      // Auto-switch if no more My Jobs
-      setTimeout(() => {
-        if (myActiveJobs.length <= 1) {
-          setActiveTab('all')
-        }
-      }, 300)
+      if (myActiveJobs.length <= 1) setActiveTab('all')
       
     } catch (error) {
-      console.error('❌ Exception:', error.message)
+      console.error('Exception:', error.message)
       toast.error('Failed to complete job')
     }
     finally { setUpdatingJob(null) }
@@ -389,9 +363,6 @@ export default function MobileHome() {
                       <div className="flex-1" onClick={() => navigate(`/mobile/jobs/${job.id}`)}>
                         <h3 className="font-semibold text-slate-800 text-sm">{job.title}</h3>
                         <p className="text-xs text-slate-400">{job.job_number} · {job.clients?.company_name || 'Client'}</p>
-                        {job.notes?.includes('SELECTED BY:') && (
-                          <p className="text-[10px] text-amber-600 mt-0.5">{job.notes.split('at')[0]}</p>
-                        )}
                       </div>
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700">Active</span>
                     </div>
