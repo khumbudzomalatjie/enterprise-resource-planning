@@ -12,8 +12,6 @@ import JobPhotos from '../pages/JobPhotos'
 import LiveMap from '../pages/LiveMap'
 import IncidentReports from '../pages/IncidentReports'
 import SupplyOrders from '../pages/SupplyOrders'
-
-// Inline imports for IncidentReport
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useAuthStore from '../../../store/authStore'
@@ -23,7 +21,7 @@ import { supabase } from '../../../lib/supabaseClient'
 import { AlertCircle, ArrowLeft, Send, Camera } from 'lucide-react'
 import BottomNav from '../components/BottomNav'
 
-// IncidentReport component defined inline to avoid missing file errors
+// Inline IncidentReport component
 function IncidentReportPage() {
   const { user, profile } = useAuthStore()
   const { myJobs, fetchMyJobs } = useMobileStore()
@@ -51,14 +49,14 @@ function IncidentReportPage() {
       let photoUrl = null
       if (photoFile) {
         const fileExt = photoFile.name.split('.').pop()
-        const fileName = `incidents/${Date.now()}.${fileExt}`
+        const fileName = 'incidents/' + Date.now() + '.' + fileExt
         const { error: uploadError } = await supabase.storage.from('fleet').upload(fileName, photoFile, { upsert: true })
         if (!uploadError) { const { data: { publicUrl } } = supabase.storage.from('fleet').getPublicUrl(fileName); photoUrl = publicUrl }
       }
       const { data: employee } = await supabase.from('employees').select('id').eq('user_id', user?.id).single()
       const { error } = await supabase.from('incident_reports').insert([{ employee_id: employee?.id, job_id: formData.job_id || null, incident_type: formData.incident_type, description: formData.description, severity: formData.severity, photo_url: photoUrl, status: 'reported' }])
       if (error) throw error
-      toast.success('Incident reported! ✅')
+      toast.success('Incident reported!')
       setFormData({ job_id: '', incident_type: 'other', description: '', severity: 'medium' })
       setPhotoFile(null); setPhotoPreview(null)
     } catch (error) { toast.error('Failed to submit') }
@@ -83,7 +81,7 @@ function IncidentReportPage() {
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <label className="text-sm font-semibold text-slate-500 mb-2 block">Incident Type</label>
           <div className="grid grid-cols-2 gap-2">
-            {[{ value: 'damage', label: '🔨 Damage' },{ value: 'injury', label: '🤕 Injury' },{ value: 'complaint', label: '📢 Complaint' },{ value: 'security', label: '🔒 Security' },{ value: 'other', label: '📋 Other' }].map(type => (
+            {[{ value: 'damage', label: 'Damage' },{ value: 'injury', label: 'Injury' },{ value: 'complaint', label: 'Complaint' },{ value: 'security', label: 'Security' },{ value: 'other', label: 'Other' }].map(type => (
               <button key={type.value} onClick={() => setFormData({...formData, incident_type: type.value})}
                 className={`py-2.5 rounded-xl text-sm font-medium ${formData.incident_type === type.value ? 'bg-red-500 text-white' : 'bg-slate-100 text-slate-600'}`}>{type.label}</button>
             ))}
@@ -106,7 +104,7 @@ function IncidentReportPage() {
           <label className="text-sm font-semibold text-slate-500 mb-2 block">Photo (optional)</label>
           {photoPreview ? (
             <div className="relative"><img src={photoPreview} alt="Preview" className="w-full h-48 object-cover rounded-xl" />
-              <button onClick={() => { setPhotoFile(null); setPhotoPreview(null) }} className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center">✕</button></div>
+              <button onClick={() => { setPhotoFile(null); setPhotoPreview(null) }} className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center">X</button></div>
           ) : (
             <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:bg-slate-50">
               <Camera className="w-8 h-8 text-slate-400 mb-1" /><span className="text-sm text-slate-400">Tap to add photo</span>
@@ -127,7 +125,9 @@ function IncidentReportPage() {
 export default function MobileRoutes() {
   return (
     <Routes>
-      {/* Cleaner Mobile Routes */}
+      {/* ============================================ */}
+      {/* CLEANER MOBILE ROUTES                        */}
+      {/* ============================================ */}
       <Route path="/" element={<ProtectedRoute><MobileHome /></ProtectedRoute>} />
       <Route path="/jobs" element={<ProtectedRoute><MyJobs /></ProtectedRoute>} />
       <Route path="/jobs/:id" element={<ProtectedRoute><MyJobs /></ProtectedRoute>} />
@@ -137,9 +137,12 @@ export default function MobileRoutes() {
       <Route path="/incident" element={<ProtectedRoute><IncidentReportPage /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><MyProfile /></ProtectedRoute>} />
 
-      {/* Manager Field Operations Routes */}
+      {/* ============================================ */}
+      {/* MANAGER FIELD OPERATIONS ROUTES              */}
+      {/* ============================================ */}
       <Route path="/field" element={<ProtectedRoute><FieldDashboard /></ProtectedRoute>} />
       <Route path="/field/cleaners" element={<ProtectedRoute><ActiveCleaners /></ProtectedRoute>} />
+      <Route path="/field/live-jobs" element={<ProtectedRoute><FieldDashboard /></ProtectedRoute>} />
       <Route path="/field/photos" element={<ProtectedRoute><JobPhotos /></ProtectedRoute>} />
       <Route path="/field/incidents" element={<ProtectedRoute><IncidentReports /></ProtectedRoute>} />
       <Route path="/field/supplies" element={<ProtectedRoute><SupplyOrders /></ProtectedRoute>} />
