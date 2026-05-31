@@ -100,7 +100,7 @@ export default function MobileHome() {
       const { data: openJobs } = await openQuery
       setAllOpenJobs(openJobs || [])
 
-      // MY JOBS: All in_progress jobs
+      // MY JOBS: Only in_progress (completed jobs disappear automatically)
       let myQuery = supabase
         .from('jobs')
         .select('id, title, job_number, status, scheduled_date, scheduled_start_time, scheduled_end_time, site_address, notes, clients(company_name, phone), job_categories(name, color)')
@@ -139,7 +139,7 @@ export default function MobileHome() {
 
   const handleSignOut = async () => { await signOut(); navigate('/login') }
 
-  // SELECT JOB - Moves from Open Pool to My Jobs
+  // SELECT JOB
   const handleSelectJob = async (jobId) => {
     if (!myEmployeeId) { toast.error('Profile not ready. Refresh and try again.'); return }
     setUpdatingJob(jobId)
@@ -167,7 +167,7 @@ export default function MobileHome() {
     finally { setUpdatingJob(null) }
   }
 
-  // START JOB - For jobs that are selected but not yet started
+  // START JOB
   const handleStartJob = async (jobId) => {
     setUpdatingJob(jobId)
     try {
@@ -180,17 +180,30 @@ export default function MobileHome() {
     finally { setUpdatingJob(null) }
   }
 
-  // COMPLETE JOB
+  // COMPLETE JOB - Disappears from My Jobs, shows as completed on ERP
   const handleCompleteJob = async (jobId) => {
-    if (!window.confirm('Mark as completed? This will send for invoicing.')) return
+    if (!window.confirm('Mark as completed? This will send for invoicing and disappear from your list.')) return
     setUpdatingJob(jobId)
     try {
-      await supabase.from('jobs').update({ 
-        status: 'completed', actual_end_time: new Date().toISOString(), updated_at: new Date().toISOString()
+      const { error } = await supabase.from('jobs').update({ 
+        status: 'completed', 
+        actual_end_time: new Date().toISOString(), 
+        updated_at: new Date().toISOString()
       }).eq('id', jobId)
+      
+      if (error) throw error
+
       toast.success('Completed! Moving to finance ✅')
-      loadAllJobs()
-    } catch { toast.error('Failed') }
+      
+      // Refresh lists - completed job will NOT appear in My Jobs (only shows in_progress)
+      await loadAllJobs()
+      
+      // If no more My Jobs, auto-switch to Open Pool
+      if (myActiveJobs.length <= 1) {
+        setActiveTab('all')
+      }
+      
+    } catch { toast.error('Failed to complete job') }
     finally { setUpdatingJob(null) }
   }
 
@@ -345,7 +358,7 @@ export default function MobileHome() {
           </div>
         )}
 
-        {/* MY JOBS TAB - Start & Complete buttons */}
+        {/* MY JOBS TAB */}
         {activeTab === 'mine' && (
           <div className="px-5 mb-4">
             {loadingAllJobs ? <div className="text-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div></div>
@@ -367,7 +380,7 @@ export default function MobileHome() {
                     <div className="flex items-center gap-2 text-xs text-slate-500 mb-2"><Calendar className="w-3 h-3" /><span>{job.scheduled_date === todayStr ? 'Today' : formatDateShort(job.scheduled_date)}</span><span className="mx-1">·</span><Clock className="w-3 h-3" />{job.scheduled_start_time?.slice(0,5)}-{job.scheduled_end_time?.slice(0,5)}</div>
                     <div className="flex items-center gap-2 text-xs text-slate-500 mb-3"><MapPin className="w-3 h-3" />{job.site_address?.slice(0, 40)}</div>
                     
-                    {/* BUTTONS: Start & Complete */}
+                    {/* Start & Complete Buttons */}
                     <div className="flex gap-2 mb-2">
                       <button onClick={() => handleStartJob(job.id)} disabled={updatingJob === job.id}
                         className="flex-1 py-2.5 bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50 shadow-sm">
