@@ -141,7 +141,6 @@ export default function MobileHome() {
   const handleSelectJob = async (jobId) => {
     if (!myEmployeeId) { toast.error('Profile not ready. Refresh and try again.'); return }
     
-    // CHECK: Does this cleaner already have an active job?
     if (myActiveJobs.length > 0) {
       const activeJobTitle = myActiveJobs[0].title || 'another job'
       toast.error('You already have an active job: ' + activeJobTitle + '. Complete it first before selecting a new one.')
@@ -187,15 +186,21 @@ export default function MobileHome() {
     finally { setUpdatingJob(null) }
   }
 
-  // COMPLETE JOB - Frees up cleaner for new job
+  // COMPLETE JOB - Saves cleaner name for Live Jobs tracking
   const handleCompleteJob = async (jobId) => {
     if (!window.confirm('Mark as completed? You can then select a new job.')) return
     setUpdatingJob(jobId)
     
     try {
+      const cleanerName = myProfile?.first_name || user?.email?.split('@')[0] || 'Cleaner'
+      
       const { error } = await supabase
         .from('jobs')
-        .update({ status: 'completed', updated_at: new Date().toISOString() })
+        .update({ 
+          status: 'completed', 
+          updated_at: new Date().toISOString(),
+          notes: 'COMPLETED BY: ' + cleanerName + ' at ' + new Date().toLocaleString()
+        })
         .eq('id', jobId)
 
       if (error) {
@@ -206,7 +211,7 @@ export default function MobileHome() {
 
       toast.success('Completed! You can now select a new job.')
       await loadAllJobs()
-      setActiveTab('all') // Switch to Open Pool for next job
+      setActiveTab('all')
       
     } catch (error) {
       console.error('Exception:', error.message)
@@ -261,7 +266,6 @@ export default function MobileHome() {
       </AnimatePresence>
 
       <div ref={scrollRef} className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 64px)' }}>
-        {/* Header */}
         <div className="px-5 pt-6 pb-6 text-white">
           <div className="flex justify-between items-start mb-1">
             <div className="flex-1">
@@ -275,7 +279,6 @@ export default function MobileHome() {
           </div>
           <p className="text-5xl font-bold text-center my-3 font-mono tracking-wider">{formatTime(currentTime)}</p>
           
-          {/* Active Job Warning */}
           {hasActiveJob && (
             <div className="mt-2 bg-amber-400/20 border border-amber-400/30 rounded-xl p-3 flex items-center gap-2">
               <Briefcase className="w-5 h-5 text-amber-300 flex-shrink-0" />
@@ -287,7 +290,6 @@ export default function MobileHome() {
           )}
         </div>
 
-        {/* Stats */}
         <div className="px-5 -mt-3">
           <div className="grid grid-cols-4 gap-2">
             {[
@@ -306,7 +308,6 @@ export default function MobileHome() {
           </div>
         </div>
 
-        {/* Quick Actions */}
         <div className="px-5 mt-4">
           <div className="grid grid-cols-2 gap-2">
             {[
@@ -323,7 +324,6 @@ export default function MobileHome() {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="px-5 mt-5">
           <div className="flex gap-2 bg-white/10 rounded-2xl p-1">
             <button onClick={() => setActiveTab('all')}
@@ -337,7 +337,6 @@ export default function MobileHome() {
           </div>
         </div>
 
-        {/* Search & Date */}
         <div className="px-5 mt-3 mb-3 space-y-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
