@@ -9,6 +9,7 @@ import MyProfile from '../pages/MyProfile'
 import FieldDashboard from '../pages/FieldDashboard'
 import ActiveCleaners from '../pages/ActiveCleaners'
 import JobPhotos from '../pages/JobPhotos'
+import LiveJobs from '../pages/LiveJobs'
 import LiveMap from '../pages/LiveMap'
 import IncidentReports from '../pages/IncidentReports'
 import SupplyOrders from '../pages/SupplyOrders'
@@ -19,7 +20,6 @@ import useMobileStore from '../store/mobileStore'
 import toast from 'react-hot-toast'
 import { supabase } from '../../../lib/supabaseClient'
 import { AlertCircle, ArrowLeft, Send, Camera } from 'lucide-react'
-import LiveJobs from '../pages/LiveJobs'
 import BottomNav from '../components/BottomNav'
 
 // Inline IncidentReport component
@@ -143,12 +143,11 @@ export default function MobileRoutes() {
       {/* ============================================ */}
       <Route path="/field" element={<ProtectedRoute><FieldDashboard /></ProtectedRoute>} />
       <Route path="/field/cleaners" element={<ProtectedRoute><ActiveCleaners /></ProtectedRoute>} />
-      <Route path="/field/live-jobs" element={<ProtectedRoute><FieldDashboard /></ProtectedRoute>} />
+      <Route path="/field/live-jobs" element={<ProtectedRoute><LiveJobs /></ProtectedRoute>} />
       <Route path="/field/photos" element={<ProtectedRoute><JobPhotos /></ProtectedRoute>} />
       <Route path="/field/incidents" element={<ProtectedRoute><IncidentReports /></ProtectedRoute>} />
       <Route path="/field/supplies" element={<ProtectedRoute><SupplyOrders /></ProtectedRoute>} />
       <Route path="/field/map" element={<ProtectedRoute><LiveMap /></ProtectedRoute>} />
-      <Route path="/field/live-jobs" element={<ProtectedRoute><LiveJobs /></ProtectedRoute>} />
     </Routes>
   )
 }
