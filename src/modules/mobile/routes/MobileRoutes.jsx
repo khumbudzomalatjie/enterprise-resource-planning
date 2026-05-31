@@ -12,6 +12,8 @@ import JobPhotos from '../pages/JobPhotos'
 import LiveMap from '../pages/LiveMap'
 import IncidentReports from '../pages/IncidentReports'
 import SupplyOrders from '../pages/SupplyOrders'
+
+// Inline imports for IncidentReport
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useAuthStore from '../../../store/authStore'
@@ -21,7 +23,7 @@ import { supabase } from '../../../lib/supabaseClient'
 import { AlertCircle, ArrowLeft, Send, Camera } from 'lucide-react'
 import BottomNav from '../components/BottomNav'
 
-// Inline IncidentReport component
+// IncidentReport component defined inline to avoid missing file errors
 function IncidentReportPage() {
   const { user, profile } = useAuthStore()
   const { myJobs, fetchMyJobs } = useMobileStore()
@@ -121,6 +123,7 @@ function IncidentReportPage() {
   )
 }
 
+// Main Routes Component
 export default function MobileRoutes() {
   return (
     <Routes>
