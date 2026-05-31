@@ -8,7 +8,7 @@ import toast from 'react-hot-toast'
 import { 
   Briefcase, MapPin, Clock, Calendar, Search,
   Users, CheckCircle2, AlertCircle, ArrowLeft,
-  Sun, Moon, Sparkles, RefreshCw
+  Sun, Moon, Sparkles, RefreshCw, RotateCcw
 } from 'lucide-react'
 
 export default function LiveJobs() {
@@ -19,6 +19,7 @@ export default function LiveJobs() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [releasingJob, setReleasingJob] = useState(null)
 
   useEffect(() => {
     loadAllJobs()
@@ -60,25 +61,21 @@ export default function LiveJobs() {
   const getCleanerName = (job) => {
     if (!job?.notes) return null
     
-    // Check for "SELECTED BY:" pattern (active jobs)
     if (job.notes.includes('SELECTED BY:')) {
       const name = job.notes.split('SELECTED BY:')[1]?.split('at')[0]?.trim()
       if (name && name !== 'undefined') return name
     }
     
-    // Check for "COMPLETED BY:" pattern
     if (job.notes.includes('COMPLETED BY:')) {
       const name = job.notes.split('COMPLETED BY:')[1]?.split('at')[0]?.trim()
       if (name && name !== 'undefined') return name
     }
     
-    // Check for "PAUSED BY CLEANER:" pattern
     if (job.notes.includes('PAUSED BY CLEANER:')) {
       const name = job.notes.split('PAUSED BY CLEANER:')[1]?.split('\n')[0]?.trim()
       if (name && name !== 'undefined') return name
     }
     
-    // Generic name match - look for "Name at date" pattern
     const nameMatch = job.notes.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+at\s+/)
     if (nameMatch && nameMatch[1] && nameMatch[1] !== 'undefined') {
       return nameMatch[1]
@@ -87,7 +84,7 @@ export default function LiveJobs() {
     return null
   }
 
-  // Get status label for cleaner column - FIXED
+  // Get status label for cleaner column
   const getCleanerStatus = (job) => {
     const name = getCleanerName(job)
     
@@ -95,13 +92,59 @@ export default function LiveJobs() {
       return { name, hasCleaner: true }
     }
     
-    // Only show "Available" for open jobs without a cleaner
     if (job.status === 'pending' || job.status === 'scheduled') {
       return { name: 'Available', hasCleaner: false }
     }
     
-    // For completed, on_hold, or any other status without a name
     return { name: 'Unassigned', hasCleaner: false }
+  }
+
+  // RELEASE JOB - Send back to Open Pool (Management only)
+  const handleReleaseJob = async (jobId, jobTitle) => {
+    if (!window.confirm('Release "' + jobTitle + '" back to Open Pool? The cleaner will no longer have this job.')) return
+    
+    setReleasingJob(jobId)
+    
+    try {
+      const { error } = await supabase
+        .from('jobs')
+        .update({ 
+          status: 'scheduled',
+          assigned_to: null,
+          actual_start_time: null,
+          updated_at: new Date().toISOString(),
+          notes: 'RELEASED BY MANAGEMENT at ' + new Date().toLocaleString()
+        })
+        .eq('id', jobId)
+
+      if (error) {
+        // If assigned_to column doesn't exist, try without it
+        const { error: fallbackError } = await supabase
+          .from('jobs')
+          .update({ 
+            status: 'scheduled',
+            actual_start_time: null,
+            updated_at: new Date().toISOString(),
+            notes: 'RELEASED BY MANAGEMENT at ' + new Date().toLocaleString()
+          })
+          .eq('id', jobId)
+        
+        if (fallbackError) {
+          console.error('Release error:', fallbackError)
+          toast.error('Failed to release job')
+          return
+        }
+      }
+
+      toast.success('Job released back to Open Pool!')
+      loadAllJobs()
+      
+    } catch (error) {
+      console.error('Release exception:', error)
+      toast.error('Failed to release job')
+    } finally {
+      setReleasingJob(null)
+    }
   }
 
   const formatDate = (date) => {
@@ -244,6 +287,7 @@ export default function LiveJobs() {
                       <th className="text-left py-3 px-3 text-slate-500 font-medium">Time</th>
                       <th className="text-center py-3 px-3 text-slate-500 font-medium">Status</th>
                       <th className="text-center py-3 px-3 text-slate-500 font-medium">Completed</th>
+                      <th className="text-center py-3 px-3 text-slate-500 font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -348,6 +392,40 @@ export default function LiveJobs() {
                               <span className="text-[10px] text-slate-400">-</span>
                             )}
                           </td>
+                          <td className="py-3 px-3 text-center">
+                            {/* Release Button - Only for active/in_progress jobs */}
+                            {isActive && (
+                              <button 
+                                onClick={() => handleReleaseJob(job.id, job.title)}
+                                disabled={releasingJob === job.id}
+                                className="px-3 py-1.5 rounded-xl bg-orange-500 text-white text-xs font-medium hover:bg-orange-600 disabled:opacity-50 flex items-center gap-1 mx-auto transition-colors"
+                                title="Release job back to Open Pool"
+                              >
+                                {releasingJob === job.id ? (
+                                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                                ) : (
+                                  <RotateCcw className="w-3 h-3" />
+                                )}
+                                Release
+                              </button>
+                            )}
+                            {/* Resume button for held jobs */}
+                            {job.status === 'on_hold' && (
+                              <button 
+                                onClick={() => handleReleaseJob(job.id, job.title)}
+                                disabled={releasingJob === job.id}
+                                className="px-3 py-1.5 rounded-xl bg-blue-500 text-white text-xs font-medium hover:bg-blue-600 disabled:opacity-50 flex items-center gap-1 mx-auto transition-colors"
+                                title="Resume job back to Open Pool"
+                              >
+                                {releasingJob === job.id ? (
+                                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                                ) : (
+                                  <RotateCcw className="w-3 h-3" />
+                                )}
+                                Resume
+                              </button>
+                            )}
+                          </td>
                         </tr>
                       )
                     })}
@@ -385,8 +463,8 @@ export default function LiveJobs() {
             <span className="text-slate-600 dark:text-slate-400">On Hold</span>
           </div>
           <div className="flex items-center gap-2">
-            <Users className="w-3 h-3 text-amber-600" />
-            <span className="text-slate-600 dark:text-slate-400">Cleaner Name Shown</span>
+            <RotateCcw className="w-3 h-3 text-orange-500" />
+            <span className="text-slate-600 dark:text-slate-400">Release Job</span>
           </div>
         </div>
       </main>
